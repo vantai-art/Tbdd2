@@ -1,98 +1,346 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, Platform } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  withSequence,
+  withDelay,
+  Easing,
+  runOnJS,
+} from 'react-native-reanimated';
+import { router } from 'expo-router';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+const isWeb = Platform.OS === 'web';
 
-export default function HomeScreen() {
+// Component cho từng icon đồ ăn bay
+const FloatingFood = ({
+  emoji,
+  startX,
+  startY,
+  delay
+}: {
+  emoji: string;
+  startX: number;
+  startY: number;
+  delay: number;
+}) => {
+  const translateX = useSharedValue(startX);
+  const translateY = useSharedValue(startY);
+  const scale = useSharedValue(0);
+  const rotate = useSharedValue(0);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    scale.value = withDelay(
+      delay,
+      withSpring(1, {
+        damping: 8,
+        stiffness: 100,
+      })
+    );
+
+    opacity.value = withDelay(
+      delay,
+      withTiming(1, { duration: 400 })
+    );
+
+    translateX.value = withDelay(
+      delay,
+      withSpring(0, {
+        damping: 10,
+        stiffness: 80,
+      })
+    );
+
+    translateY.value = withDelay(
+      delay,
+      withSpring(0, {
+        damping: 10,
+        stiffness: 80,
+      })
+    );
+
+    rotate.value = withDelay(
+      delay,
+      withSequence(
+        withTiming(5, { duration: 300 }),
+        withTiming(-5, { duration: 300 }),
+        withTiming(0, { duration: 300 })
+      )
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: scale.value },
+      { rotate: `${rotate.value}deg` },
+    ],
+    opacity: opacity.value,
+  }));
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <Animated.Text style={[styles.foodEmoji, animatedStyle]}>
+      {emoji}
+    </Animated.Text>
+  );
+};
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+export default function Index() {
+  const logoScale = useSharedValue(0);
+  const logoRotate = useSharedValue(-180);
+  const logoOpacity = useSharedValue(0);
+
+  const textOpacity = useSharedValue(0);
+  const textTranslateY = useSharedValue(30);
+
+  const bgScale = useSharedValue(0.8);
+
+  // Hàm chuyển màn hình
+  const navigateToLogin = () => {
+    router.replace('/auth/login');
+  };
+
+  useEffect(() => {
+    // Background animation
+    bgScale.value = withTiming(1.2, {
+      duration: 2000,
+      easing: Easing.inOut(Easing.ease),
+    });
+
+    // Logo animation
+    logoScale.value = withDelay(
+      200,
+      withSpring(1, {
+        damping: 10,
+        stiffness: 100,
+        mass: 0.8,
+      })
+    );
+
+    logoRotate.value = withDelay(
+      200,
+      withSpring(0, {
+        damping: 12,
+        stiffness: 80,
+      })
+    );
+
+    logoOpacity.value = withDelay(
+      200,
+      withTiming(1, { duration: 500 })
+    );
+
+    // Text animation
+    textOpacity.value = withDelay(
+      800,
+      withTiming(1, { duration: 600 })
+    );
+
+    textTranslateY.value = withDelay(
+      800,
+      withSpring(0, {
+        damping: 15,
+        stiffness: 100,
+      })
+    );
+
+    // Chuyển màn hình sau khi animation xong
+    // Tính toán: 1100ms (delay cuối) + 900ms (animation duration) + 500ms (buffer) = 3500ms
+    const timer = setTimeout(() => {
+      navigateToLogin();
+    }, 3500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const logoAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: logoScale.value },
+      { rotate: `${logoRotate.value}deg` },
+    ],
+    opacity: logoOpacity.value,
+  }));
+
+  const textAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: textOpacity.value,
+    transform: [{ translateY: textTranslateY.value }],
+  }));
+
+  const bgAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: bgScale.value }],
+  }));
+
+  const foodIcons = [
+    { emoji: '🍔', startX: -150, startY: -200, delay: 400 },
+    { emoji: '🍟', startX: 150, startY: -180, delay: 500 },
+    { emoji: '🥤', startX: -140, startY: 180, delay: 600 },
+    { emoji: '☕', startX: 140, startY: 200, delay: 700 },
+    { emoji: '🍕', startX: -120, startY: -50, delay: 800 },
+    { emoji: '🌮', startX: 130, startY: 50, delay: 900 },
+    { emoji: '🍩', startX: -100, startY: 100, delay: 1000 },
+    { emoji: '🥗', startX: 110, startY: -120, delay: 1100 },
+  ];
+
+  return (
+    <View style={styles.container}>
+      {/* Background gradient effect */}
+      <Animated.View style={[styles.bgCircle, bgAnimatedStyle]} />
+
+      {/* Food icons bay vào */}
+      {foodIcons.map((food, index) => (
+        <FloatingFood
+          key={index}
+          emoji={food.emoji}
+          startX={food.startX}
+          startY={food.startY}
+          delay={food.delay}
+        />
+      ))}
+
+      {/* Logo chính */}
+      <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
+        <View style={styles.logoCircle}>
+          <View style={styles.storeIcon}>
+            <View style={styles.awning} />
+            <View style={styles.shopFront}>
+              <View style={styles.window} />
+              <View style={styles.door} />
+            </View>
+          </View>
+        </View>
+      </Animated.View>
+
+      {/* Text animation */}
+      <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
+        <Animated.Text style={styles.title}>
+          Food & Drink
+        </Animated.Text>
+        <Animated.Text style={styles.subtitle}>
+          Sales
+        </Animated.Text>
+        <Animated.Text style={styles.slogan}>
+          Quản lý bán hàng thông minh
+        </Animated.Text>
+      </Animated.View>
+
+      {/* Decorative elements */}
+      <Animated.Text style={[styles.heart1, textAnimatedStyle]}>
+        ❤️
+      </Animated.Text>
+      <Animated.Text style={[styles.heart2, textAnimatedStyle]}>
+        ❤️
+      </Animated.Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  bgCircle: {
     position: 'absolute',
+    width: isWeb ? 300 : 400,
+    height: isWeb ? 300 : 400,
+    borderRadius: isWeb ? 150 : 200,
+    backgroundColor: '#FFE5D0',
+    opacity: 0.5,
+  },
+  logoContainer: {
+    marginBottom: isWeb ? 20 : 30,
+  },
+  logoCircle: {
+    width: isWeb ? 120 : 180,
+    height: isWeb ? 120 : 180,
+    borderRadius: isWeb ? 30 : 45,
+    backgroundColor: '#FF8C42',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  storeIcon: {
+    alignItems: 'center',
+    transform: [{ scale: isWeb ? 0.7 : 1 }],
+  },
+  awning: {
+    width: 90,
+    height: 20,
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    borderBottomWidth: 3,
+    borderBottomColor: '#FFD700',
+    marginBottom: -3,
+  },
+  shopFront: {
+    width: 80,
+    height: 70,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    flexDirection: 'row',
+    padding: 8,
+    gap: 6,
+  },
+  window: {
+    flex: 1,
+    backgroundColor: '#87CEEB',
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: '#DDD',
+  },
+  door: {
+    width: 24,
+    backgroundColor: '#D2691E',
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: '#DDD',
+  },
+  textContainer: {
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: isWeb ? 28 : 36,
+    fontWeight: '800',
+    color: '#2C3E50',
+    letterSpacing: 1,
+  },
+  subtitle: {
+    fontSize: isWeb ? 24 : 32,
+    fontWeight: '700',
+    color: '#FF8C42',
+    marginTop: -5,
+  },
+  slogan: {
+    fontSize: isWeb ? 14 : 16,
+    color: '#7F8C8D',
+    marginTop: 10,
+    fontWeight: '500',
+  },
+  foodEmoji: {
+    position: 'absolute',
+    fontSize: isWeb ? 32 : 48,
+  },
+  heart1: {
+    position: 'absolute',
+    right: isWeb ? 100 : 60,
+    top: '35%',
+    fontSize: isWeb ? 18 : 24,
+  },
+  heart2: {
+    position: 'absolute',
+    left: isWeb ? 80 : 50,
+    top: '40%',
+    fontSize: isWeb ? 16 : 20,
   },
 });
