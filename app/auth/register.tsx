@@ -8,9 +8,9 @@ import {
     StyleSheet,
     KeyboardAvoidingView,
     Platform,
-    ScrollView,
-    Dimensions,
+    TouchableWithoutFeedback,
     Keyboard,
+    Dimensions,
     BackHandler,
     Modal,
 } from "react-native";
@@ -22,12 +22,10 @@ import Animated, {
     withSequence,
     withTiming,
     FadeInDown,
-    FadeInUp,
-    FadeIn,
 } from "react-native-reanimated";
 
-const { width, height } = Dimensions.get('window');
-const isWeb = Platform.OS === 'web';
+const { width, height } = Dimensions.get("window");
+const isWeb = Platform.OS === "web";
 
 export default function Register() {
     const [name, setName] = useState("");
@@ -57,25 +55,15 @@ export default function Register() {
     const logoRotate = useSharedValue(10);
 
     useEffect(() => {
-        logoScale.value = withSpring(1, {
-            damping: 10,
-            stiffness: 100,
-        });
-        logoRotate.value = withSpring(0, {
-            damping: 12,
+        logoScale.value = withSpring(1);
+        logoRotate.value = withSpring(0);
+
+        const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
+            setShowExitDialog(true);
+            return true;
         });
 
-        const backHandler = BackHandler.addEventListener(
-            'hardwareBackPress',
-            () => {
-                setShowExitDialog(true);
-                return true;
-            }
-        );
-
-        return () => {
-            backHandler.remove();
-        };
+        return () => backHandler.remove();
     }, []);
 
     useEffect(() => {
@@ -99,8 +87,8 @@ export default function Register() {
     const logoStyle = useAnimatedStyle(() => ({
         transform: [
             { scale: logoScale.value },
-            { rotate: `${logoRotate.value}deg` },
-        ],
+            { rotate: `${logoRotate.value}deg` }
+        ]
     }));
 
     const validateName = (name: string) => {
@@ -151,238 +139,152 @@ export default function Register() {
             withTiming(1, { duration: 100 })
         );
 
-        try {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            alert("Đăng ký thành công!");
-            router.replace("/auth/login");
-        } catch (error) {
-            alert("Đăng ký thất bại!");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+        await new Promise(res => setTimeout(res, 1500));
 
-    const handleNameChange = (text: string) => {
-        setName(text);
-        if (errors.name) {
-            setErrors(prev => ({ ...prev, name: "" }));
-        }
-    };
-
-    const handleEmailChange = (text: string) => {
-        setEmail(text);
-        if (errors.email) {
-            setErrors(prev => ({ ...prev, email: "" }));
-        }
-    };
-
-    const handlePasswordChange = (text: string) => {
-        setPassword(text);
-        if (errors.password) {
-            setErrors(prev => ({ ...prev, password: "" }));
-        }
-        if (confirm && errors.confirm) {
-            setErrors(prev => ({ ...prev, confirm: "" }));
-        }
-    };
-
-    const handleConfirmChange = (text: string) => {
-        setConfirm(text);
-        if (errors.confirm) {
-            setErrors(prev => ({ ...prev, confirm: "" }));
-        }
+        setIsLoading(false);
+        alert("Đăng ký thành công!");
+        router.replace("/auth/login");
     };
 
     const handleExitApp = () => {
         setShowExitDialog(false);
         setTimeout(() => {
             BackHandler.exitApp();
-        }, 100);
+        }, 200);
     };
 
     return (
         <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                bounces={false}
-            >
-                <View style={styles.bgCircle1} />
-                <View style={styles.bgCircle2} />
-                <View style={styles.bgCircle3} />
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <View style={styles.container}>
 
-                <Animated.View
-                    entering={FadeInDown.duration(800).springify()}
-                    style={[styles.logoSection, logoStyle]}
-                >
-                    <View style={styles.logoCircle}>
-                        <Text style={styles.logoEmoji}>🍽️</Text>
-                    </View>
-                    <Text style={styles.logoText}>Tạo tài khoản mới</Text>
-                    <Text style={styles.logoSubtext}>Bắt đầu quản lý bán hàng</Text>
-                </Animated.View>
+                    {/* BG CIRCLES */}
+                    <View style={styles.bgCircle1} />
+                    <View style={styles.bgCircle2} />
+                    <View style={styles.bgCircle3} />
 
-                <Animated.View
-                    entering={FadeInUp.delay(200).duration(800).springify()}
-                    style={styles.formCard}
-                >
-                    <Text style={styles.welcomeText}>Xin chào! 🎉</Text>
-                    <Text style={styles.subtitle}>Điền thông tin để đăng ký</Text>
+                    {/* LOGO */}
+                    <Animated.View entering={FadeInDown.duration(800)} style={[styles.logoSection, logoStyle]}>
+                        <View style={styles.logoCircle}>
+                            <Text style={styles.logoEmoji}>🍽️</Text>
+                        </View>
+                        <Text style={styles.logoText}>Tạo tài khoản mới</Text>
+                        <Text style={styles.logoSubtext}>Bắt đầu quản lý bán hàng</Text>
+                    </Animated.View>
 
-                    {/* Name Input */}
-                    <Animated.View entering={FadeInUp.delay(400).duration(600)}>
+                    {/* FORM */}
+                    <View style={styles.formCard}>
+
+                        <Text style={styles.welcomeText}>Xin chào! 🎉</Text>
+                        <Text style={styles.subtitle}>Điền thông tin để đăng ký</Text>
+
+                        {/* NAME */}
                         <View
                             style={[
                                 styles.inputContainer,
-                                focusedInput === 'name' && styles.inputFocused,
+                                focusedInput === "name" && styles.inputFocused,
                                 errors.name && styles.inputError
                             ]}
                         >
                             <Text style={styles.inputIcon}>👤</Text>
                             <TextInput
                                 ref={nameInputRef}
-                                style={styles.input}
                                 placeholder="Họ và tên"
-                                placeholderTextColor="#999"
                                 value={name}
-                                onChangeText={handleNameChange}
-                                onFocus={() => setFocusedInput('name')}
-                                onBlur={() => setFocusedInput('')}
+                                onChangeText={setName}
+                                style={styles.input}
                                 autoCorrect={false}
+                                onFocus={() => setFocusedInput("name")}
+                                onBlur={() => setFocusedInput("")}
                                 returnKeyType="next"
                                 onSubmitEditing={() => emailInputRef.current?.focus()}
                             />
-                            {name && !errors.name && focusedInput !== 'name' && (
-                                <Text style={styles.successIcon}>✓</Text>
-                            )}
                         </View>
-                        <View style={styles.errorContainer}>
-                            {errors.name ? (
-                                <Text style={styles.errorText}>{errors.name}</Text>
-                            ) : null}
-                        </View>
-                    </Animated.View>
+                        {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : <View style={{ height: 18 }} />}
 
-                    {/* Email Input */}
-                    <Animated.View entering={FadeInUp.delay(500).duration(600)}>
+                        {/* EMAIL */}
                         <View
                             style={[
                                 styles.inputContainer,
-                                focusedInput === 'email' && styles.inputFocused,
+                                focusedInput === "email" && styles.inputFocused,
                                 errors.email && styles.inputError
                             ]}
                         >
                             <Text style={styles.inputIcon}>📧</Text>
                             <TextInput
                                 ref={emailInputRef}
-                                style={styles.input}
-                                placeholder="Email của bạn"
-                                placeholderTextColor="#999"
+                                placeholder="Email"
                                 value={email}
-                                onChangeText={handleEmailChange}
-                                onFocus={() => setFocusedInput('email')}
-                                onBlur={() => setFocusedInput('')}
+                                onChangeText={setEmail}
+                                style={styles.input}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
-                                autoCorrect={false}
+                                onFocus={() => setFocusedInput("email")}
+                                onBlur={() => setFocusedInput("")}
                                 returnKeyType="next"
                                 onSubmitEditing={() => passwordInputRef.current?.focus()}
                             />
-                            {email && !errors.email && focusedInput !== 'email' && (
-                                <Text style={styles.successIcon}>✓</Text>
-                            )}
                         </View>
-                        <View style={styles.errorContainer}>
-                            {errors.email ? (
-                                <Text style={styles.errorText}>{errors.email}</Text>
-                            ) : null}
-                        </View>
-                    </Animated.View>
+                        {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : <View style={{ height: 18 }} />}
 
-                    {/* Password Input */}
-                    <Animated.View entering={FadeInUp.delay(600).duration(600)}>
+                        {/* PASSWORD */}
                         <View
                             style={[
                                 styles.inputContainer,
-                                focusedInput === 'password' && styles.inputFocused,
+                                focusedInput === "password" && styles.inputFocused,
                                 errors.password && styles.inputError
                             ]}
                         >
                             <Text style={styles.inputIcon}>🔒</Text>
                             <TextInput
                                 ref={passwordInputRef}
-                                style={styles.input}
                                 placeholder="Mật khẩu (tối thiểu 6 ký tự)"
-                                placeholderTextColor="#999"
-                                secureTextEntry={!showPassword}
                                 value={password}
-                                onChangeText={handlePasswordChange}
-                                onFocus={() => setFocusedInput('password')}
-                                onBlur={() => setFocusedInput('')}
+                                secureTextEntry={!showPassword}
+                                onChangeText={setPassword}
+                                style={styles.input}
+                                onFocus={() => setFocusedInput("password")}
+                                onBlur={() => setFocusedInput("")}
                                 returnKeyType="next"
                                 onSubmitEditing={() => confirmInputRef.current?.focus()}
                             />
-                            <TouchableOpacity
-                                onPress={() => setShowPassword(!showPassword)}
-                                style={styles.eyeButton}
-                            >
-                                <Text style={styles.eyeIcon}>
-                                    {showPassword ? '👁️' : '👁️‍🗨️'}
-                                </Text>
+                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                <Text style={{ fontSize: 20 }}>{showPassword ? "👁️" : "👁️‍🗨️"}</Text>
                             </TouchableOpacity>
                         </View>
-                        <View style={styles.errorContainer}>
-                            {errors.password ? (
-                                <Text style={styles.errorText}>{errors.password}</Text>
-                            ) : null}
-                        </View>
-                    </Animated.View>
+                        {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : <View style={{ height: 18 }} />}
 
-                    {/* Confirm Password Input */}
-                    <Animated.View entering={FadeInUp.delay(700).duration(600)}>
+                        {/* CONFIRM PASSWORD */}
                         <View
                             style={[
                                 styles.inputContainer,
-                                focusedInput === 'confirm' && styles.inputFocused,
+                                focusedInput === "confirm" && styles.inputFocused,
                                 errors.confirm && styles.inputError
                             ]}
                         >
                             <Text style={styles.inputIcon}>✅</Text>
                             <TextInput
                                 ref={confirmInputRef}
-                                style={styles.input}
                                 placeholder="Nhập lại mật khẩu"
-                                placeholderTextColor="#999"
-                                secureTextEntry={!showConfirm}
                                 value={confirm}
-                                onChangeText={handleConfirmChange}
-                                onFocus={() => setFocusedInput('confirm')}
-                                onBlur={() => setFocusedInput('')}
+                                secureTextEntry={!showConfirm}
+                                onChangeText={setConfirm}
+                                style={styles.input}
+                                onFocus={() => setFocusedInput("confirm")}
+                                onBlur={() => setFocusedInput("")}
                                 returnKeyType="done"
                                 onSubmitEditing={handleRegister}
                             />
-                            <TouchableOpacity
-                                onPress={() => setShowConfirm(!showConfirm)}
-                                style={styles.eyeButton}
-                            >
-                                <Text style={styles.eyeIcon}>
-                                    {showConfirm ? '👁️' : '👁️‍🗨️'}
-                                </Text>
+                            <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
+                                <Text style={{ fontSize: 20 }}>{showConfirm ? "👁️" : "👁️‍🗨️"}</Text>
                             </TouchableOpacity>
                         </View>
-                        <View style={styles.errorContainer}>
-                            {errors.confirm ? (
-                                <Text style={styles.errorText}>{errors.confirm}</Text>
-                            ) : null}
-                        </View>
-                    </Animated.View>
+                        {errors.confirm ? <Text style={styles.errorText}>{errors.confirm}</Text> : <View style={{ height: 18 }} />}
 
-                    <Animated.View entering={FadeInUp.delay(800).duration(600)}>
+                        {/* TERMS */}
                         <Text style={styles.termsText}>
                             Bằng việc đăng ký, bạn đồng ý với{' '}
                             <Text style={styles.termsLink}>Điều khoản</Text>
@@ -390,491 +292,256 @@ export default function Register() {
                             <Text style={styles.termsLink}>Chính sách</Text>
                             {' '}của chúng tôi
                         </Text>
-                    </Animated.View>
 
-                    <Animated.View entering={FadeInUp.delay(900).duration(600)}>
+                        {/* REGISTER BUTTON */}
                         <TouchableOpacity
-                            style={[styles.registerBtn, isLoading && styles.btnDisabled]}
+                            style={[styles.registerBtn, isLoading && { opacity: 0.7 }]}
                             onPress={handleRegister}
                             disabled={isLoading}
-                            activeOpacity={0.8}
                         >
                             <Text style={styles.registerBtnText}>
                                 {isLoading ? "Đang xử lý..." : "Đăng ký ngay"}
                             </Text>
-                            {!isLoading && <Text style={styles.btnIcon}>✨</Text>}
                         </TouchableOpacity>
-                    </Animated.View>
 
-                    <Animated.View
-                        entering={FadeInUp.delay(1000).duration(600)}
-                        style={styles.divider}
-                    >
-                        <View style={styles.dividerLine} />
-                        <Text style={styles.dividerText}>hoặc</Text>
-                        <View style={styles.dividerLine} />
-                    </Animated.View>
+                        {/* DIVIDER */}
+                        <View style={styles.divider}>
+                            <View style={styles.dividerLine} />
+                            <Text style={styles.dividerText}>hoặc</Text>
+                            <View style={styles.dividerLine} />
+                        </View>
 
-                    <Animated.View entering={FadeInUp.delay(1100).duration(600)}>
+                        {/* LOGIN LINK */}
                         <TouchableOpacity
                             style={styles.loginBtn}
                             onPress={() => router.push("/auth/login")}
-                            activeOpacity={0.8}
                         >
                             <Text style={styles.loginBtnText}>
                                 Đã có tài khoản?
                                 <Text style={styles.loginHighlight}> Đăng nhập</Text>
                             </Text>
                         </TouchableOpacity>
-                    </Animated.View>
-                </Animated.View>
 
-                <Animated.Text
-                    entering={FadeIn.delay(1200).duration(800)}
-                    style={styles.floatingIcon1}
-                >
-                    🍔
-                </Animated.Text>
-                <Animated.Text
-                    entering={FadeIn.delay(1300).duration(800)}
-                    style={styles.floatingIcon2}
-                >
-                    🧁
-                </Animated.Text>
-                <Animated.Text
-                    entering={FadeIn.delay(1400).duration(800)}
-                    style={styles.floatingIcon3}
-                >
-                    🍩
-                </Animated.Text>
-                <Animated.Text
-                    entering={FadeIn.delay(1500).duration(800)}
-                    style={styles.floatingIcon4}
-                >
-                    🥤
-                </Animated.Text>
-            </ScrollView>
+                    </View>
+                </View>
+            </TouchableWithoutFeedback>
 
-            <Modal
-                transparent={true}
-                visible={showExitDialog}
-                animationType="fade"
-                onRequestClose={() => setShowExitDialog(false)}
-            >
+            {/* EXIT MODAL */}
+            <Modal visible={showExitDialog} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
-                    <Animated.View
-                        entering={FadeInDown.duration(300).springify()}
-                        style={styles.dialogContainer}
-                    >
-                        <View style={styles.dialogIcon}>
-                            <Text style={styles.dialogIconText}>📝</Text>
-                        </View>
-
+                    <View style={styles.dialogContainer}>
+                        <Text style={styles.dialogIcon}>📝</Text>
                         <Text style={styles.dialogTitle}>
-                            Thật sự muốn đi sao? Còn rất nhiều đồ ăn và nước uống đang chờ bạn thưởng thức, nhớ quay lại sớm nhé!
+                            Bạn có chắc muốn thoát không?
                         </Text>
-
-                        <Text style={styles.dialogCountdown}>
-                            ({countdown}s sau tự động tắt)
-                        </Text>
+                        <Text style={styles.dialogCountdown}>({countdown}s)</Text>
 
                         <View style={styles.dialogButtons}>
-                            <TouchableOpacity
-                                style={styles.dialogBtnConfirm}
-                                onPress={handleExitApp}
-                                activeOpacity={0.8}
-                            >
-                                <Text style={styles.dialogBtnConfirmText}>OK</Text>
+                            <TouchableOpacity style={styles.dialogBtnConfirm} onPress={handleExitApp}>
+                                <Text style={styles.dialogBtnConfirmText}>Thoát</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.dialogBtnCancel}
                                 onPress={() => setShowExitDialog(false)}
-                                activeOpacity={0.8}
                             >
-                                <Text style={styles.dialogBtnCancelText}>Suy nghĩ đã</Text>
+                                <Text style={styles.dialogBtnCancelText}>Ở lại</Text>
                             </TouchableOpacity>
                         </View>
-                    </Animated.View>
+                    </View>
                 </View>
             </Modal>
+
         </KeyboardAvoidingView>
     );
 }
 
+/* ==================== STYLES ==================== */
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        padding: 20,
         backgroundColor: "#FFF",
+        justifyContent: "flex-start"
     },
-    scrollContent: {
-        flexGrow: 1,
-        padding: isWeb ? 40 : 20,
-        paddingTop: isWeb ? 60 : 50,
-        maxWidth: isWeb ? 500 : '100%',
-        width: '100%',
-        alignSelf: 'center',
-    },
+
     bgCircle1: {
-        position: 'absolute',
-        width: isWeb ? 180 : 250,
-        height: isWeb ? 180 : 250,
-        borderRadius: isWeb ? 90 : 125,
-        backgroundColor: '#D0FFE5',
-        top: isWeb ? -60 : -80,
-        right: isWeb ? -60 : -80,
+        position: "absolute",
+        width: 250,
+        height: 250,
+        borderRadius: 125,
+        backgroundColor: "#D0FFE5",
+        top: -80,
+        right: -80,
         opacity: 0.3,
     },
     bgCircle2: {
-        position: 'absolute',
-        width: isWeb ? 150 : 200,
-        height: isWeb ? 150 : 200,
-        borderRadius: isWeb ? 75 : 100,
-        backgroundColor: '#FFE5D0',
-        top: isWeb ? 150 : 200,
-        left: isWeb ? -50 : -70,
+        position: "absolute",
+        width: 200,
+        height: 200,
+        borderRadius: 100,
+        backgroundColor: "#FFE5D0",
+        top: 200,
+        left: -70,
         opacity: 0.3,
     },
     bgCircle3: {
-        position: 'absolute',
-        width: isWeb ? 130 : 180,
-        height: isWeb ? 130 : 180,
-        borderRadius: isWeb ? 65 : 90,
-        backgroundColor: '#E5D0FF',
-        bottom: isWeb ? 40 : 50,
-        right: isWeb ? -40 : -60,
+        position: "absolute",
+        width: 180,
+        height: 180,
+        borderRadius: 90,
+        backgroundColor: "#E5D0FF",
+        bottom: 50,
+        right: -60,
         opacity: 0.3,
     },
+
+    /* LOGO */
     logoSection: {
-        alignItems: 'center',
-        marginBottom: isWeb ? 25 : 30,
+        alignItems: "center",
+        marginTop: 30,
+        marginBottom: 25,
     },
     logoCircle: {
-        width: isWeb ? 80 : 100,
-        height: isWeb ? 80 : 100,
-        borderRadius: isWeb ? 40 : 50,
-        backgroundColor: '#28A745',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: isWeb ? 12 : 15,
-        ...Platform.select({
-            ios: {
-                shadowColor: '#28A745',
-                shadowOffset: { width: 0, height: 5 },
-                shadowOpacity: 0.3,
-                shadowRadius: 10,
-            },
-            android: {
-                elevation: 8,
-            },
-        }),
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: "#28A745",
+        alignItems: "center",
+        justifyContent: "center",
     },
-    logoEmoji: {
-        fontSize: isWeb ? 40 : 50,
-    },
-    logoText: {
-        fontSize: isWeb ? 22 : 26,
-        fontWeight: '800',
-        color: '#2C3E50',
-    },
-    logoSubtext: {
-        fontSize: isWeb ? 13 : 14,
-        color: '#7F8C8D',
-        marginTop: 5,
-    },
+    logoEmoji: { fontSize: 50 },
+    logoText: { fontSize: 26, fontWeight: "800", color: "#2C3E50" },
+    logoSubtext: { fontSize: 14, color: "#7F8C8D", marginTop: 5 },
+
     formCard: {
-        backgroundColor: '#FFF',
-        borderRadius: isWeb ? 25 : 30,
-        padding: isWeb ? 30 : 25,
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 10 },
-                shadowOpacity: 0.1,
-                shadowRadius: 20,
-            },
-            android: {
-                elevation: 5,
-            },
-        }),
+        backgroundColor: "#FFF",
+        borderRadius: 25,
+        padding: 25,
+        elevation: 3,
     },
-    welcomeText: {
-        fontSize: isWeb ? 22 : 26,
-        fontWeight: '700',
-        color: '#2C3E50',
-        marginBottom: 5,
-    },
-    subtitle: {
-        fontSize: isWeb ? 14 : 15,
-        color: '#7F8C8D',
-        marginBottom: isWeb ? 20 : 25,
-    },
+
+    welcomeText: { fontSize: 26, fontWeight: "700", marginBottom: 5 },
+    subtitle: { color: "#7F8C8D", marginBottom: 20 },
+
+    /* INPUT */
     inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F8F9FA',
-        borderRadius: isWeb ? 12 : 15,
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#F8F9FA",
+        borderRadius: 15,
         paddingHorizontal: 15,
-        marginBottom: 4,
+        height: 55,
         borderWidth: 2,
-        borderColor: 'transparent',
+        borderColor: "transparent",
     },
     inputFocused: {
-        borderColor: '#28A745',
-        backgroundColor: '#FFF',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#28A745',
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.2,
-                shadowRadius: 5,
-            },
-            android: {
-                elevation: 3,
-            },
-        }),
+        borderColor: "#28A745",
+        backgroundColor: "#FFF",
     },
     inputError: {
-        borderColor: '#FF3B30',
-        backgroundColor: '#FFF5F5',
+        borderColor: "#FF3B30",
+        backgroundColor: "#FFF5F5",
     },
-    inputIcon: {
-        fontSize: isWeb ? 18 : 20,
-        marginRight: 10,
-    },
+    inputIcon: { fontSize: 20, marginRight: 10 },
     input: {
         flex: 1,
-        height: isWeb ? 50 : 55,
-        color: '#2C3E50',
-        fontSize: isWeb ? 14 : 15,
-        fontWeight: '500',
-    },
-    eyeButton: {
-        padding: 5,
-    },
-    eyeIcon: {
-        fontSize: 20,
-    },
-    successIcon: {
-        color: '#28A745',
-        fontSize: 20,
-        fontWeight: 'bold',
-    },
-    errorContainer: {
-        height: 28,
-        justifyContent: 'center',
-        marginBottom: 4,
+        fontSize: 15,
+        color: "#2C3E50",
     },
     errorText: {
-        color: '#FF3B30',
-        fontSize: isWeb ? 12 : 13,
-        marginLeft: 15,
-        fontWeight: '500',
+        fontSize: 13,
+        color: "#FF3B30",
+        marginTop: 5,
+        marginLeft: 10,
     },
+
     termsText: {
-        fontSize: isWeb ? 11 : 12,
-        color: '#7F8C8D',
-        textAlign: 'center',
-        marginBottom: isWeb ? 18 : 20,
-        lineHeight: isWeb ? 16 : 18,
+        fontSize: 12,
+        color: "#7F8C8D",
+        textAlign: "center",
+        marginBottom: 20,
+        lineHeight: 18,
     },
     termsLink: {
-        color: '#28A745',
-        fontWeight: '600',
+        color: "#28A745",
+        fontWeight: "600",
     },
+
     registerBtn: {
-        backgroundColor: '#28A745',
-        borderRadius: isWeb ? 12 : 15,
-        height: isWeb ? 50 : 55,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#28A745',
-                shadowOffset: { width: 0, height: 5 },
-                shadowOpacity: 0.3,
-                shadowRadius: 10,
-            },
-            android: {
-                elevation: 5,
-            },
-        }),
-    },
-    btnDisabled: {
-        opacity: 0.6,
+        backgroundColor: "#28A745",
+        height: 55,
+        borderRadius: 15,
+        alignItems: "center",
+        justifyContent: "center",
     },
     registerBtnText: {
-        color: '#FFF',
-        fontSize: isWeb ? 16 : 17,
-        fontWeight: '700',
-        marginRight: 5,
+        color: "#FFF",
+        fontSize: 17,
+        fontWeight: "700",
     },
-    btnIcon: {
-        fontSize: isWeb ? 18 : 20,
-    },
+
     divider: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginVertical: isWeb ? 20 : 25,
+        flexDirection: "row",
+        alignItems: "center",
+        marginVertical: 25,
     },
-    dividerLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: '#E0E0E0',
-    },
-    dividerText: {
-        marginHorizontal: 15,
-        color: '#7F8C8D',
-        fontSize: isWeb ? 13 : 14,
-    },
+    dividerLine: { flex: 1, height: 1, backgroundColor: "#E0E0E0" },
+    dividerText: { marginHorizontal: 10, color: "#7F8C8D" },
+
     loginBtn: {
-        backgroundColor: '#F8F9FA',
-        borderRadius: isWeb ? 12 : 15,
-        height: isWeb ? 50 : 55,
-        alignItems: 'center',
-        justifyContent: 'center',
+        backgroundColor: "#F8F9FA",
+        height: 55,
+        borderRadius: 15,
+        alignItems: "center",
+        justifyContent: "center",
         borderWidth: 2,
-        borderColor: '#E0E0E0',
+        borderColor: "#E0E0E0",
     },
-    loginBtnText: {
-        color: '#7F8C8D',
-        fontSize: isWeb ? 14 : 15,
-        fontWeight: '600',
-    },
-    loginHighlight: {
-        color: '#28A745',
-        fontWeight: '700',
-    },
-    floatingIcon1: {
-        position: 'absolute',
-        fontSize: isWeb ? 28 : 35,
-        top: isWeb ? 60 : 80,
-        left: isWeb ? 25 : 15,
-        opacity: 0.2,
-    },
-    floatingIcon2: {
-        position: 'absolute',
-        fontSize: isWeb ? 22 : 28,
-        top: isWeb ? 120 : 150,
-        right: isWeb ? 30 : 20,
-        opacity: 0.2,
-    },
-    floatingIcon3: {
-        position: 'absolute',
-        fontSize: isWeb ? 26 : 32,
-        bottom: isWeb ? 160 : 200,
-        left: isWeb ? 30 : 20,
-        opacity: 0.2,
-    },
-    floatingIcon4: {
-        position: 'absolute',
-        fontSize: isWeb ? 24 : 30,
-        bottom: isWeb ? 100 : 120,
-        right: isWeb ? 25 : 15,
-        opacity: 0.2,
-    },
+    loginBtnText: { color: "#7F8C8D" },
+    loginHighlight: { color: "#28A745", fontWeight: "700" },
+
+    /* EXIT MODAL */
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
+        backgroundColor: "rgba(0,0,0,0.6)",
+        justifyContent: "center",
+        alignItems: "center",
     },
     dialogContainer: {
-        backgroundColor: '#FFF',
-        borderRadius: 20,
+        width: "85%",
+        backgroundColor: "#FFF",
         padding: 25,
-        width: '100%',
-        maxWidth: 400,
-        alignItems: 'center',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 10 },
-                shadowOpacity: 0.3,
-                shadowRadius: 20,
-            },
-            android: {
-                elevation: 10,
-            },
-        }),
+        borderRadius: 20,
+        alignItems: "center",
     },
-    dialogIcon: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: '#E8F5E9',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 15,
-    },
-    dialogIconText: {
-        fontSize: 30,
-    },
-    dialogTitle: {
-        fontSize: 16,
-        color: '#2C3E50',
-        textAlign: 'center',
-        marginBottom: 10,
-        lineHeight: 24,
-    },
-    dialogCountdown: {
-        fontSize: 14,
-        color: '#28A745',
-        marginBottom: 20,
-        fontWeight: '600',
-    },
+    dialogIcon: { fontSize: 40, marginBottom: 10 },
+    dialogTitle: { fontSize: 16, textAlign: "center", marginBottom: 10 },
+    dialogCountdown: { color: "#28A745", marginBottom: 20 },
+
     dialogButtons: {
-        flexDirection: 'row',
-        width: '100%',
-        gap: 12,
-    },
-    dialogBtnCancel: {
-        flex: 1,
-        height: 50,
-        backgroundColor: '#00B4D8',
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#00B4D8',
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.3,
-                shadowRadius: 5,
-            },
-            android: {
-                elevation: 3,
-            },
-        }),
-    },
-    dialogBtnCancelText: {
-        color: '#FFF',
-        fontSize: 16,
-        fontWeight: '700',
+        flexDirection: "row",
+        width: "100%",
+        justifyContent: "space-between",
     },
     dialogBtnConfirm: {
         flex: 1,
+        marginRight: 10,
+        backgroundColor: "#FFD93D",
         height: 50,
-        backgroundColor: '#FFD93D',
         borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#FFD93D',
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.3,
-                shadowRadius: 5,
-            },
-            android: {
-                elevation: 3,
-            },
-        }),
+        alignItems: "center",
+        justifyContent: "center",
     },
-    dialogBtnConfirmText: {
-        color: '#2C3E50',
-        fontSize: 16,
-        fontWeight: '700',
+    dialogBtnConfirmText: { fontWeight: "700" },
+
+    dialogBtnCancel: {
+        flex: 1,
+        backgroundColor: "#00B4D8",
+        height: 50,
+        borderRadius: 12,
+        alignItems: "center",
+        justifyContent: "center",
     },
+    dialogBtnCancelText: { color: "#FFF", fontWeight: "700" },
 });
