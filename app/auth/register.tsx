@@ -8,7 +8,6 @@ import {
     StyleSheet,
     KeyboardAvoidingView,
     Platform,
-    TouchableWithoutFeedback,
     Keyboard,
     Dimensions,
     BackHandler,
@@ -158,173 +157,171 @@ export default function Register() {
             style={{ flex: 1 }}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <View style={styles.container}>
+            <View style={styles.container}>
 
-                    {/* BG CIRCLES */}
-                    <View style={styles.bgCircle1} />
-                    <View style={styles.bgCircle2} />
-                    <View style={styles.bgCircle3} />
+                {/* BG CIRCLES */}
+                <View style={styles.bgCircle1} />
+                <View style={styles.bgCircle2} />
+                <View style={styles.bgCircle3} />
 
-                    {/* LOGO */}
-                    <Animated.View entering={FadeInDown.duration(800)} style={[styles.logoSection, logoStyle]}>
-                        <View style={styles.logoCircle}>
-                            <Text style={styles.logoEmoji}>🍽️</Text>
-                        </View>
-                        <Text style={styles.logoText}>Tạo tài khoản mới</Text>
-                        <Text style={styles.logoSubtext}>Bắt đầu quản lý bán hàng</Text>
-                    </Animated.View>
-
-                    {/* FORM */}
-                    <View style={styles.formCard}>
-
-                        <Text style={styles.welcomeText}>Xin chào! 🎉</Text>
-                        <Text style={styles.subtitle}>Điền thông tin để đăng ký</Text>
-
-                        {/* NAME */}
-                        <View
-                            style={[
-                                styles.inputContainer,
-                                focusedInput === "name" && styles.inputFocused,
-                                errors.name && styles.inputError
-                            ]}
-                        >
-                            <Text style={styles.inputIcon}>👤</Text>
-                            <TextInput
-                                ref={nameInputRef}
-                                placeholder="Họ và tên"
-                                value={name}
-                                onChangeText={setName}
-                                style={styles.input}
-                                autoCorrect={false}
-                                onFocus={() => setFocusedInput("name")}
-                                onBlur={() => setFocusedInput("")}
-                                returnKeyType="next"
-                                onSubmitEditing={() => emailInputRef.current?.focus()}
-                            />
-                        </View>
-                        {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : <View style={{ height: 18 }} />}
-
-                        {/* EMAIL */}
-                        <View
-                            style={[
-                                styles.inputContainer,
-                                focusedInput === "email" && styles.inputFocused,
-                                errors.email && styles.inputError
-                            ]}
-                        >
-                            <Text style={styles.inputIcon}>📧</Text>
-                            <TextInput
-                                ref={emailInputRef}
-                                placeholder="Email"
-                                value={email}
-                                onChangeText={setEmail}
-                                style={styles.input}
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                                onFocus={() => setFocusedInput("email")}
-                                onBlur={() => setFocusedInput("")}
-                                returnKeyType="next"
-                                onSubmitEditing={() => passwordInputRef.current?.focus()}
-                            />
-                        </View>
-                        {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : <View style={{ height: 18 }} />}
-
-                        {/* PASSWORD */}
-                        <View
-                            style={[
-                                styles.inputContainer,
-                                focusedInput === "password" && styles.inputFocused,
-                                errors.password && styles.inputError
-                            ]}
-                        >
-                            <Text style={styles.inputIcon}>🔒</Text>
-                            <TextInput
-                                ref={passwordInputRef}
-                                placeholder="Mật khẩu (tối thiểu 6 ký tự)"
-                                value={password}
-                                secureTextEntry={!showPassword}
-                                onChangeText={setPassword}
-                                style={styles.input}
-                                onFocus={() => setFocusedInput("password")}
-                                onBlur={() => setFocusedInput("")}
-                                returnKeyType="next"
-                                onSubmitEditing={() => confirmInputRef.current?.focus()}
-                            />
-                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                                <Text style={{ fontSize: 20 }}>{showPassword ? "👁️" : "👁️‍🗨️"}</Text>
-                            </TouchableOpacity>
-                        </View>
-                        {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : <View style={{ height: 18 }} />}
-
-                        {/* CONFIRM PASSWORD */}
-                        <View
-                            style={[
-                                styles.inputContainer,
-                                focusedInput === "confirm" && styles.inputFocused,
-                                errors.confirm && styles.inputError
-                            ]}
-                        >
-                            <Text style={styles.inputIcon}>✅</Text>
-                            <TextInput
-                                ref={confirmInputRef}
-                                placeholder="Nhập lại mật khẩu"
-                                value={confirm}
-                                secureTextEntry={!showConfirm}
-                                onChangeText={setConfirm}
-                                style={styles.input}
-                                onFocus={() => setFocusedInput("confirm")}
-                                onBlur={() => setFocusedInput("")}
-                                returnKeyType="done"
-                                onSubmitEditing={handleRegister}
-                            />
-                            <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
-                                <Text style={{ fontSize: 20 }}>{showConfirm ? "👁️" : "👁️‍🗨️"}</Text>
-                            </TouchableOpacity>
-                        </View>
-                        {errors.confirm ? <Text style={styles.errorText}>{errors.confirm}</Text> : <View style={{ height: 18 }} />}
-
-                        {/* TERMS */}
-                        <Text style={styles.termsText}>
-                            Bằng việc đăng ký, bạn đồng ý với{' '}
-                            <Text style={styles.termsLink}>Điều khoản</Text>
-                            {' '}và{' '}
-                            <Text style={styles.termsLink}>Chính sách</Text>
-                            {' '}của chúng tôi
-                        </Text>
-
-                        {/* REGISTER BUTTON */}
-                        <TouchableOpacity
-                            style={[styles.registerBtn, isLoading && { opacity: 0.7 }]}
-                            onPress={handleRegister}
-                            disabled={isLoading}
-                        >
-                            <Text style={styles.registerBtnText}>
-                                {isLoading ? "Đang xử lý..." : "Đăng ký ngay"}
-                            </Text>
-                        </TouchableOpacity>
-
-                        {/* DIVIDER */}
-                        <View style={styles.divider}>
-                            <View style={styles.dividerLine} />
-                            <Text style={styles.dividerText}>hoặc</Text>
-                            <View style={styles.dividerLine} />
-                        </View>
-
-                        {/* LOGIN LINK */}
-                        <TouchableOpacity
-                            style={styles.loginBtn}
-                            onPress={() => router.push("/auth/login")}
-                        >
-                            <Text style={styles.loginBtnText}>
-                                Đã có tài khoản?
-                                <Text style={styles.loginHighlight}> Đăng nhập</Text>
-                            </Text>
-                        </TouchableOpacity>
-
+                {/* LOGO */}
+                <Animated.View entering={FadeInDown.duration(800)} style={[styles.logoSection, logoStyle]}>
+                    <View style={styles.logoCircle}>
+                        <Text style={styles.logoEmoji}>🍽️</Text>
                     </View>
+                    <Text style={styles.logoText}>Tạo tài khoản mới</Text>
+                    <Text style={styles.logoSubtext}>Bắt đầu quản lý bán hàng</Text>
+                </Animated.View>
+
+                {/* FORM */}
+                <View style={styles.formCard}>
+
+                    <Text style={styles.welcomeText}>Xin chào! 🎉</Text>
+                    <Text style={styles.subtitle}>Điền thông tin để đăng ký</Text>
+
+                    {/* NAME */}
+                    <View
+                        style={[
+                            styles.inputContainer,
+                            focusedInput === "name" && styles.inputFocused,
+                            errors.name && styles.inputError
+                        ]}
+                    >
+                        <Text style={styles.inputIcon}>👤</Text>
+                        <TextInput
+                            ref={nameInputRef}
+                            placeholder="Họ và tên"
+                            value={name}
+                            onChangeText={setName}
+                            style={styles.input}
+                            autoCorrect={false}
+                            onFocus={() => setFocusedInput("name")}
+                            onBlur={() => setFocusedInput("")}
+                            returnKeyType="next"
+                            onSubmitEditing={() => emailInputRef.current?.focus()}
+                        />
+                    </View>
+                    {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : <View style={{ height: 18 }} />}
+
+                    {/* EMAIL */}
+                    <View
+                        style={[
+                            styles.inputContainer,
+                            focusedInput === "email" && styles.inputFocused,
+                            errors.email && styles.inputError
+                        ]}
+                    >
+                        <Text style={styles.inputIcon}>📧</Text>
+                        <TextInput
+                            ref={emailInputRef}
+                            placeholder="Email"
+                            value={email}
+                            onChangeText={setEmail}
+                            style={styles.input}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            onFocus={() => setFocusedInput("email")}
+                            onBlur={() => setFocusedInput("")}
+                            returnKeyType="next"
+                            onSubmitEditing={() => passwordInputRef.current?.focus()}
+                        />
+                    </View>
+                    {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : <View style={{ height: 18 }} />}
+
+                    {/* PASSWORD */}
+                    <View
+                        style={[
+                            styles.inputContainer,
+                            focusedInput === "password" && styles.inputFocused,
+                            errors.password && styles.inputError
+                        ]}
+                    >
+                        <Text style={styles.inputIcon}>🔒</Text>
+                        <TextInput
+                            ref={passwordInputRef}
+                            placeholder="Mật khẩu (tối thiểu 6 ký tự)"
+                            value={password}
+                            secureTextEntry={!showPassword}
+                            onChangeText={setPassword}
+                            style={styles.input}
+                            onFocus={() => setFocusedInput("password")}
+                            onBlur={() => setFocusedInput("")}
+                            returnKeyType="next"
+                            onSubmitEditing={() => confirmInputRef.current?.focus()}
+                        />
+                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                            <Text style={{ fontSize: 20 }}>{showPassword ? "👁️" : "👁️‍🗨️"}</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : <View style={{ height: 18 }} />}
+
+                    {/* CONFIRM PASSWORD */}
+                    <View
+                        style={[
+                            styles.inputContainer,
+                            focusedInput === "confirm" && styles.inputFocused,
+                            errors.confirm && styles.inputError
+                        ]}
+                    >
+                        <Text style={styles.inputIcon}>✅</Text>
+                        <TextInput
+                            ref={confirmInputRef}
+                            placeholder="Nhập lại mật khẩu"
+                            value={confirm}
+                            secureTextEntry={!showConfirm}
+                            onChangeText={setConfirm}
+                            style={styles.input}
+                            onFocus={() => setFocusedInput("confirm")}
+                            onBlur={() => setFocusedInput("")}
+                            returnKeyType="done"
+                            onSubmitEditing={handleRegister}
+                        />
+                        <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
+                            <Text style={{ fontSize: 20 }}>{showConfirm ? "👁️" : "👁️‍🗨️"}</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {errors.confirm ? <Text style={styles.errorText}>{errors.confirm}</Text> : <View style={{ height: 18 }} />}
+
+                    {/* TERMS */}
+                    <Text style={styles.termsText}>
+                        Bằng việc đăng ký, bạn đồng ý với{' '}
+                        <Text style={styles.termsLink}>Điều khoản</Text>
+                        {' '}và{' '}
+                        <Text style={styles.termsLink}>Chính sách</Text>
+                        {' '}của chúng tôi
+                    </Text>
+
+                    {/* REGISTER BUTTON */}
+                    <TouchableOpacity
+                        style={[styles.registerBtn, isLoading && { opacity: 0.7 }]}
+                        onPress={handleRegister}
+                        disabled={isLoading}
+                    >
+                        <Text style={styles.registerBtnText}>
+                            {isLoading ? "Đang xử lý..." : "Đăng ký ngay"}
+                        </Text>
+                    </TouchableOpacity>
+
+                    {/* DIVIDER */}
+                    <View style={styles.divider}>
+                        <View style={styles.dividerLine} />
+                        <Text style={styles.dividerText}>hoặc</Text>
+                        <View style={styles.dividerLine} />
+                    </View>
+
+                    {/* LOGIN LINK */}
+                    <TouchableOpacity
+                        style={styles.loginBtn}
+                        onPress={() => router.push("/auth/login")}
+                    >
+                        <Text style={styles.loginBtnText}>
+                            Đã có tài khoản?
+                            <Text style={styles.loginHighlight}> Đăng nhập</Text>
+                        </Text>
+                    </TouchableOpacity>
+
                 </View>
-            </TouchableWithoutFeedback>
+            </View>
 
             {/* EXIT MODAL */}
             <Modal visible={showExitDialog} transparent animationType="fade">
@@ -374,6 +371,7 @@ const styles = StyleSheet.create({
         top: -80,
         right: -80,
         opacity: 0.3,
+        pointerEvents: "none",
     },
     bgCircle2: {
         position: "absolute",
@@ -384,6 +382,7 @@ const styles = StyleSheet.create({
         top: 200,
         left: -70,
         opacity: 0.3,
+        pointerEvents: "none",
     },
     bgCircle3: {
         position: "absolute",
@@ -394,6 +393,7 @@ const styles = StyleSheet.create({
         bottom: 50,
         right: -60,
         opacity: 0.3,
+        pointerEvents: "none",
     },
 
     /* LOGO */
@@ -401,6 +401,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginTop: 30,
         marginBottom: 25,
+        pointerEvents: "none",
     },
     logoCircle: {
         width: 100,
@@ -419,6 +420,7 @@ const styles = StyleSheet.create({
         borderRadius: 25,
         padding: 25,
         elevation: 3,
+        pointerEvents: "auto",
     },
 
     welcomeText: { fontSize: 26, fontWeight: "700", marginBottom: 5 },

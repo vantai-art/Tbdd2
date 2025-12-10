@@ -11,6 +11,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
+        {/* Index - sẽ tự động redirect */}
+        <Stack.Screen name="index" />
+
         {/* Splash screen */}
         <Stack.Screen name="splash/SplashScreen" />
 

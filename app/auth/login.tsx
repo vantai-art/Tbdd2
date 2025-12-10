@@ -8,7 +8,6 @@ import {
     StyleSheet,
     KeyboardAvoidingView,
     Platform,
-    TouchableWithoutFeedback,
     Keyboard,
     Dimensions,
     BackHandler,
@@ -131,117 +130,115 @@ export default function Login() {
             style={{ flex: 1 }}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <View style={styles.container}>
+            <View style={styles.container}>
 
-                    {/* BG CIRCLES */}
-                    <View style={styles.bgCircle1} />
-                    <View style={styles.bgCircle2} />
+                {/* BG CIRCLES */}
+                <View style={styles.bgCircle1} />
+                <View style={styles.bgCircle2} />
 
-                    {/* LOGO */}
-                    <Animated.View entering={FadeInDown.duration(800)} style={[styles.logoSection, logoStyle]}>
-                        <View style={styles.logoCircle}>
-                            <Text style={styles.logoEmoji}>🍔</Text>
-                        </View>
-                        <Text style={styles.logoText}>Food & Drink</Text>
-                        <Text style={styles.logoSubtext}>Quản lý bán hàng</Text>
-                    </Animated.View>
-
-                    {/* FORM */}
-                    <View style={styles.formCard}>
-
-                        <Text style={styles.welcomeText}>Chào mừng trở lại! 👋</Text>
-                        <Text style={styles.subtitle}>Đăng nhập để tiếp tục</Text>
-
-                        {/* EMAIL */}
-                        <View
-                            style={[
-                                styles.inputContainer,
-                                focusedInput === "email" && styles.inputFocused,
-                                errors.email && styles.inputError
-                            ]}
-                        >
-                            <Text style={styles.inputIcon}>📧</Text>
-                            <TextInput
-                                ref={emailInputRef}
-                                placeholder="Email"
-                                value={email}
-                                onChangeText={setEmail}
-                                style={styles.input}
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                                onFocus={() => setFocusedInput("email")}
-                                onBlur={() => setFocusedInput("")}
-                                returnKeyType="next"
-                                onSubmitEditing={() => passwordInputRef.current?.focus()}
-                            />
-                        </View>
-                        {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : <View style={{ height: 18 }} />}
-
-                        {/* PASSWORD */}
-                        <View
-                            style={[
-                                styles.inputContainer,
-                                focusedInput === "password" && styles.inputFocused,
-                                errors.password && styles.inputError
-                            ]}
-                        >
-                            <Text style={styles.inputIcon}>🔒</Text>
-                            <TextInput
-                                ref={passwordInputRef}
-                                placeholder="Mật khẩu"
-                                value={password}
-                                secureTextEntry={!showPassword}
-                                onChangeText={setPassword}
-                                style={styles.input}
-                                onFocus={() => setFocusedInput("password")}
-                                onBlur={() => setFocusedInput("")}
-                                returnKeyType="done"
-                                onSubmitEditing={handleLogin}
-                            />
-                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                                <Text style={{ fontSize: 20 }}>{showPassword ? "👁️" : "👁️‍🗨️"}</Text>
-                            </TouchableOpacity>
-                        </View>
-                        {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : <View style={{ height: 18 }} />}
-
-                        {/* FORGOT PASSWORD */}
-                        <TouchableOpacity>
-                            <Text style={styles.forgotText}>Quên mật khẩu?</Text>
-                        </TouchableOpacity>
-
-                        {/* LOGIN BUTTON */}
-                        <TouchableOpacity
-                            style={[styles.loginBtn, isLoading && { opacity: 0.7 }]}
-                            onPress={handleLogin}
-                            disabled={isLoading}
-                        >
-                            <Text style={styles.loginBtnText}>
-                                {isLoading ? "Đang xử lý..." : "Đăng nhập"}
-                            </Text>
-                        </TouchableOpacity>
-
-                        {/* DIVIDER */}
-                        <View style={styles.divider}>
-                            <View style={styles.dividerLine} />
-                            <Text style={styles.dividerText}>hoặc</Text>
-                            <View style={styles.dividerLine} />
-                        </View>
-
-                        {/* REGISTER */}
-                        <TouchableOpacity
-                            style={styles.registerBtn}
-                            onPress={() => router.push("/auth/register")}
-                        >
-                            <Text style={styles.registerBtnText}>
-                                Chưa có tài khoản?
-                                <Text style={styles.registerHighlight}> Đăng ký ngay</Text>
-                            </Text>
-                        </TouchableOpacity>
-
+                {/* LOGO */}
+                <Animated.View entering={FadeInDown.duration(800)} style={[styles.logoSection, logoStyle]}>
+                    <View style={styles.logoCircle}>
+                        <Text style={styles.logoEmoji}>🍔</Text>
                     </View>
+                    <Text style={styles.logoText}>Food & Drink</Text>
+                    <Text style={styles.logoSubtext}>Quản lý bán hàng</Text>
+                </Animated.View>
+
+                {/* FORM */}
+                <View style={styles.formCard}>
+
+                    <Text style={styles.welcomeText}>Chào mừng trở lại! 👋</Text>
+                    <Text style={styles.subtitle}>Đăng nhập để tiếp tục</Text>
+
+                    {/* EMAIL */}
+                    <View
+                        style={[
+                            styles.inputContainer,
+                            focusedInput === "email" && styles.inputFocused,
+                            errors.email && styles.inputError
+                        ]}
+                    >
+                        <Text style={styles.inputIcon}>📧</Text>
+                        <TextInput
+                            ref={emailInputRef}
+                            placeholder="Email"
+                            value={email}
+                            onChangeText={setEmail}
+                            style={styles.input}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            onFocus={() => setFocusedInput("email")}
+                            onBlur={() => setFocusedInput("")}
+                            returnKeyType="next"
+                            onSubmitEditing={() => passwordInputRef.current?.focus()}
+                        />
+                    </View>
+                    {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : <View style={{ height: 18 }} />}
+
+                    {/* PASSWORD */}
+                    <View
+                        style={[
+                            styles.inputContainer,
+                            focusedInput === "password" && styles.inputFocused,
+                            errors.password && styles.inputError
+                        ]}
+                    >
+                        <Text style={styles.inputIcon}>🔒</Text>
+                        <TextInput
+                            ref={passwordInputRef}
+                            placeholder="Mật khẩu"
+                            value={password}
+                            secureTextEntry={!showPassword}
+                            onChangeText={setPassword}
+                            style={styles.input}
+                            onFocus={() => setFocusedInput("password")}
+                            onBlur={() => setFocusedInput("")}
+                            returnKeyType="done"
+                            onSubmitEditing={handleLogin}
+                        />
+                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                            <Text style={{ fontSize: 20 }}>{showPassword ? "👁️" : "👁️‍🗨️"}</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : <View style={{ height: 18 }} />}
+
+                    {/* FORGOT PASSWORD */}
+                    <TouchableOpacity>
+                        <Text style={styles.forgotText}>Quên mật khẩu?</Text>
+                    </TouchableOpacity>
+
+                    {/* LOGIN BUTTON */}
+                    <TouchableOpacity
+                        style={[styles.loginBtn, isLoading && { opacity: 0.7 }]}
+                        onPress={handleLogin}
+                        disabled={isLoading}
+                    >
+                        <Text style={styles.loginBtnText}>
+                            {isLoading ? "Đang xử lý..." : "Đăng nhập"}
+                        </Text>
+                    </TouchableOpacity>
+
+                    {/* DIVIDER */}
+                    <View style={styles.divider}>
+                        <View style={styles.dividerLine} />
+                        <Text style={styles.dividerText}>hoặc</Text>
+                        <View style={styles.dividerLine} />
+                    </View>
+
+                    {/* REGISTER */}
+                    <TouchableOpacity
+                        style={styles.registerBtn}
+                        onPress={() => router.push("/auth/register")}
+                    >
+                        <Text style={styles.registerBtnText}>
+                            Chưa có tài khoản?
+                            <Text style={styles.registerHighlight}> Đăng ký ngay</Text>
+                        </Text>
+                    </TouchableOpacity>
+
                 </View>
-            </TouchableWithoutFeedback>
+            </View>
 
             {/* EXIT MODAL */}
             <Modal visible={showExitDialog} transparent animationType="fade">
@@ -291,6 +288,7 @@ const styles = StyleSheet.create({
         top: -80,
         left: -80,
         opacity: 0.3,
+        pointerEvents: "none",
     },
     bgCircle2: {
         position: "absolute",
@@ -301,6 +299,7 @@ const styles = StyleSheet.create({
         bottom: -50,
         right: -50,
         opacity: 0.3,
+        pointerEvents: "none",
     },
 
     /* LOGO */
@@ -308,6 +307,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginTop: 40,
         marginBottom: 30,
+        pointerEvents: "none",
     },
     logoCircle: {
         width: 110,
@@ -326,6 +326,7 @@ const styles = StyleSheet.create({
         borderRadius: 25,
         padding: 25,
         elevation: 3,
+        pointerEvents: "auto",
     },
 
     welcomeText: { fontSize: 26, fontWeight: "700", marginBottom: 5 },
