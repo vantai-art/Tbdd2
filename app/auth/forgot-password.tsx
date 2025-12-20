@@ -9,7 +9,6 @@ import {
     KeyboardAvoidingView,
     Platform,
     Keyboard,
-    Dimensions,
     BackHandler,
     Modal,
 } from "react-native";
@@ -23,26 +22,14 @@ import Animated, {
     FadeInDown,
 } from "react-native-reanimated";
 
-const { width, height } = Dimensions.get("window");
-const isWeb = Platform.OS === "web";
-
-export default function Login() {
+export default function ForgotPassword() {
     const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
     const [focusedInput, setFocusedInput] = useState("");
-    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [showExitDialog, setShowExitDialog] = useState(false);
-    const [countdown, setCountdown] = useState(10);
-
-    const [errors, setErrors] = useState({
-        email: "",
-        password: ""
-    });
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [errors, setErrors] = useState({ email: "" });
 
     const emailInputRef = useRef<TextInput>(null);
-    const passwordInputRef = useRef<TextInput>(null);
-
     const logoScale = useSharedValue(0);
     const logoRotate = useSharedValue(-10);
 
@@ -51,30 +38,12 @@ export default function Login() {
         logoRotate.value = withSpring(0);
 
         const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
-            setShowExitDialog(true);
+            router.back();
             return true;
         });
 
         return () => backHandler.remove();
     }, []);
-
-    useEffect(() => {
-        if (showExitDialog) {
-            setCountdown(10);
-            const timer = setInterval(() => {
-                setCountdown(prev => {
-                    if (prev <= 1) {
-                        clearInterval(timer);
-                        setShowExitDialog(false);
-                        return 10;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-
-            return () => clearInterval(timer);
-        }
-    }, [showExitDialog]);
 
     const logoStyle = useAnimatedStyle(() => ({
         transform: [
@@ -90,21 +59,13 @@ export default function Login() {
         return "";
     };
 
-    const validatePassword = (password: string) => {
-        if (!password) return "Vui lòng nhập mật khẩu";
-        if (password.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự";
-        return "";
-    };
-
-    const handleLogin = async () => {
+    const handleResetPassword = async () => {
         Keyboard.dismiss();
 
         const emailError = validateEmail(email);
-        const passwordError = validatePassword(password);
+        setErrors({ email: emailError });
 
-        setErrors({ email: emailError, password: passwordError });
-
-        if (emailError || passwordError) return;
+        if (emailError) return;
 
         setIsLoading(true);
         logoScale.value = withSequence(
@@ -112,17 +73,18 @@ export default function Login() {
             withTiming(1, { duration: 100 })
         );
 
+        // Simulate API call
         await new Promise(res => setTimeout(res, 1500));
 
         setIsLoading(false);
-        router.replace("/(tabs)/home");
+        setShowSuccessModal(true);
     };
 
-    const handleExitApp = () => {
-        setShowExitDialog(false);
+    const handleSuccessClose = () => {
+        setShowSuccessModal(false);
         setTimeout(() => {
-            BackHandler.exitApp();
-        }, 200);
+            router.replace("/auth/login");
+        }, 300);
     };
 
     return (
@@ -136,20 +98,30 @@ export default function Login() {
                 <View style={styles.bgCircle1} />
                 <View style={styles.bgCircle2} />
 
+                {/* BACK BUTTON */}
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => router.back()}
+                >
+                    <Text style={styles.backIcon}>←</Text>
+                </TouchableOpacity>
+
                 {/* LOGO */}
                 <Animated.View entering={FadeInDown.duration(800)} style={[styles.logoSection, logoStyle]}>
                     <View style={styles.logoCircle}>
-                        <Text style={styles.logoEmoji}>🍔</Text>
+                        <Text style={styles.logoEmoji}>🔐</Text>
                     </View>
-                    <Text style={styles.logoText}>Food & Drink</Text>
-                    <Text style={styles.logoSubtext}>Quản lý bán hàng</Text>
+                    <Text style={styles.logoText}>Quên mật khẩu</Text>
+                    <Text style={styles.logoSubtext}>Đặt lại mật khẩu của bạn</Text>
                 </Animated.View>
 
                 {/* FORM */}
                 <View style={styles.formCard}>
 
-                    <Text style={styles.welcomeText}>Chào mừng trở lại! 👋</Text>
-                    <Text style={styles.subtitle}>Đăng nhập để tiếp tục</Text>
+                    <Text style={styles.welcomeText}>Không vấn đề gì! 🤗</Text>
+                    <Text style={styles.subtitle}>
+                        Nhập email của bạn và chúng tôi sẽ gửi link đặt lại mật khẩu
+                    </Text>
 
                     {/* EMAIL */}
                     <View
@@ -162,7 +134,7 @@ export default function Login() {
                         <Text style={styles.inputIcon}>📧</Text>
                         <TextInput
                             ref={emailInputRef}
-                            placeholder="Email"
+                            placeholder="Nhập email của bạn"
                             value={email}
                             onChangeText={setEmail}
                             style={styles.input}
@@ -170,52 +142,32 @@ export default function Login() {
                             autoCapitalize="none"
                             onFocus={() => setFocusedInput("email")}
                             onBlur={() => setFocusedInput("")}
-                            returnKeyType="next"
-                            onSubmitEditing={() => passwordInputRef.current?.focus()}
-                        />
-                    </View>
-                    {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : <View style={{ height: 18 }} />}
-
-                    {/* PASSWORD */}
-                    <View
-                        style={[
-                            styles.inputContainer,
-                            focusedInput === "password" && styles.inputFocused,
-                            errors.password && styles.inputError
-                        ]}
-                    >
-                        <Text style={styles.inputIcon}>🔒</Text>
-                        <TextInput
-                            ref={passwordInputRef}
-                            placeholder="Mật khẩu"
-                            value={password}
-                            secureTextEntry={!showPassword}
-                            onChangeText={setPassword}
-                            style={styles.input}
-                            onFocus={() => setFocusedInput("password")}
-                            onBlur={() => setFocusedInput("")}
                             returnKeyType="done"
-                            onSubmitEditing={handleLogin}
+                            onSubmitEditing={handleResetPassword}
                         />
-                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                            <Text style={{ fontSize: 20 }}>{showPassword ? "👁️" : "👁️‍🗨️"}</Text>
-                        </TouchableOpacity>
                     </View>
-                    {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : <View style={{ height: 18 }} />}
+                    {errors.email ? (
+                        <Text style={styles.errorText}>{errors.email}</Text>
+                    ) : (
+                        <View style={{ height: 18 }} />
+                    )}
 
-                    {/* FORGOT PASSWORD */}
-                    <TouchableOpacity onPress={() => router.push("/auth/forgot-password")}>
-                        <Text style={styles.forgotText}>Quên mật khẩu?</Text>
-                    </TouchableOpacity>
+                    {/* INFO BOX */}
+                    <View style={styles.infoBox}>
+                        <Text style={styles.infoIcon}>💡</Text>
+                        <Text style={styles.infoText}>
+                            Link đặt lại mật khẩu sẽ được gửi đến email của bạn và có hiệu lực trong 15 phút
+                        </Text>
+                    </View>
 
-                    {/* LOGIN BUTTON */}
+                    {/* RESET BUTTON */}
                     <TouchableOpacity
-                        style={[styles.loginBtn, isLoading && { opacity: 0.7 }]}
-                        onPress={handleLogin}
+                        style={[styles.resetBtn, isLoading && { opacity: 0.7 }]}
+                        onPress={handleResetPassword}
                         disabled={isLoading}
                     >
-                        <Text style={styles.loginBtnText}>
-                            {isLoading ? "Đang xử lý..." : "Đăng nhập"}
+                        <Text style={styles.resetBtnText}>
+                            {isLoading ? "Đang gửi..." : "Gửi link đặt lại"}
                         </Text>
                     </TouchableOpacity>
 
@@ -226,41 +178,46 @@ export default function Login() {
                         <View style={styles.dividerLine} />
                     </View>
 
-                    {/* REGISTER */}
+                    {/* BACK TO LOGIN */}
                     <TouchableOpacity
-                        style={styles.registerBtn}
-                        onPress={() => router.push("/auth/register")}
+                        style={styles.loginBtn}
+                        onPress={() => router.back()}
                     >
-                        <Text style={styles.registerBtnText}>
-                            Chưa có tài khoản?
-                            <Text style={styles.registerHighlight}> Đăng ký ngay</Text>
+                        <Text style={styles.loginBtnText}>
+                            Nhớ mật khẩu rồi?
+                            <Text style={styles.loginHighlight}> Đăng nhập</Text>
                         </Text>
                     </TouchableOpacity>
 
                 </View>
             </View>
 
-            {/* EXIT MODAL */}
-            <Modal visible={showExitDialog} transparent animationType="fade">
+            {/* SUCCESS MODAL */}
+            <Modal visible={showSuccessModal} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.dialogContainer}>
-                        <Text style={styles.dialogIcon}>📝</Text>
-                        <Text style={styles.dialogTitle}>
-                            Bạn có chắc muốn thoát không?
-                        </Text>
-                        <Text style={styles.dialogCountdown}>({countdown}s)</Text>
-
-                        <View style={styles.dialogButtons}>
-                            <TouchableOpacity style={styles.dialogBtnConfirm} onPress={handleExitApp}>
-                                <Text style={styles.dialogBtnConfirmText}>Thoát</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.dialogBtnCancel}
-                                onPress={() => setShowExitDialog(false)}
-                            >
-                                <Text style={styles.dialogBtnCancelText}>Ở lại</Text>
-                            </TouchableOpacity>
+                        <View style={styles.successIconContainer}>
+                            <Text style={styles.successIcon}>✉️</Text>
                         </View>
+                        <Text style={styles.dialogTitle}>
+                            Email đã được gửi!
+                        </Text>
+                        <Text style={styles.dialogMessage}>
+                            Vui lòng kiểm tra email <Text style={styles.emailHighlight}>{email}</Text> để đặt lại mật khẩu
+                        </Text>
+
+                        <TouchableOpacity
+                            style={styles.dialogBtn}
+                            onPress={handleSuccessClose}
+                        >
+                            <Text style={styles.dialogBtnText}>Đã hiểu</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={handleSuccessClose}>
+                            <Text style={styles.resendText}>
+                                Không nhận được email? <Text style={styles.resendLink}>Gửi lại</Text>
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
@@ -284,7 +241,7 @@ const styles = StyleSheet.create({
         width: 260,
         height: 260,
         borderRadius: 130,
-        backgroundColor: "#FFE5D0",
+        backgroundColor: "#E5D0FF",
         top: -80,
         left: -80,
         opacity: 0.3,
@@ -295,17 +252,33 @@ const styles = StyleSheet.create({
         width: 200,
         height: 200,
         borderRadius: 100,
-        backgroundColor: "#FFD0D0",
+        backgroundColor: "#D0E5FF",
         bottom: -50,
         right: -50,
         opacity: 0.3,
         pointerEvents: "none",
     },
 
+    /* BACK BUTTON */
+    backButton: {
+        width: 45,
+        height: 45,
+        borderRadius: 12,
+        backgroundColor: "#F8F9FA",
+        alignItems: "center",
+        justifyContent: "center",
+        marginTop: 10,
+        marginBottom: 10,
+    },
+    backIcon: {
+        fontSize: 24,
+        color: "#2C3E50",
+    },
+
     /* LOGO */
     logoSection: {
         alignItems: "center",
-        marginTop: 40,
+        marginTop: 20,
         marginBottom: 30,
         pointerEvents: "none",
     },
@@ -313,12 +286,12 @@ const styles = StyleSheet.create({
         width: 110,
         height: 110,
         borderRadius: 55,
-        backgroundColor: "#FF8C42",
+        backgroundColor: "#6C63FF",
         alignItems: "center",
         justifyContent: "center",
     },
     logoEmoji: { fontSize: 55 },
-    logoText: { fontSize: 28, fontWeight: "800", color: "#2C3E50" },
+    logoText: { fontSize: 28, fontWeight: "800", color: "#2C3E50", marginTop: 15 },
     logoSubtext: { fontSize: 15, color: "#7F8C8D", marginTop: 5 },
 
     formCard: {
@@ -330,7 +303,11 @@ const styles = StyleSheet.create({
     },
 
     welcomeText: { fontSize: 26, fontWeight: "700", marginBottom: 5 },
-    subtitle: { color: "#7F8C8D", marginBottom: 20 },
+    subtitle: {
+        color: "#7F8C8D",
+        marginBottom: 25,
+        lineHeight: 20,
+    },
 
     /* INPUT */
     inputContainer: {
@@ -344,7 +321,7 @@ const styles = StyleSheet.create({
         borderColor: "transparent",
     },
     inputFocused: {
-        borderColor: "#FF8C42",
+        borderColor: "#6C63FF",
         backgroundColor: "#FFF",
     },
     inputError: {
@@ -364,22 +341,35 @@ const styles = StyleSheet.create({
         marginLeft: 10,
     },
 
-    forgotText: {
-        textAlign: "right",
-        marginTop: 8,
-        fontWeight: "600",
-        color: "#FF8C42",
+    /* INFO BOX */
+    infoBox: {
+        flexDirection: "row",
+        backgroundColor: "#F0F8FF",
+        padding: 15,
+        borderRadius: 12,
+        marginBottom: 20,
+        borderLeftWidth: 4,
+        borderLeftColor: "#6C63FF",
+    },
+    infoIcon: {
+        fontSize: 18,
+        marginRight: 10,
+    },
+    infoText: {
+        flex: 1,
+        fontSize: 13,
+        color: "#5A6C7D",
+        lineHeight: 18,
     },
 
-    loginBtn: {
-        backgroundColor: "#FF8C42",
+    resetBtn: {
+        backgroundColor: "#6C63FF",
         height: 55,
         borderRadius: 15,
         alignItems: "center",
         justifyContent: "center",
-        marginTop: 20,
     },
-    loginBtnText: {
+    resetBtnText: {
         color: "#FFF",
         fontSize: 17,
         fontWeight: "700",
@@ -393,7 +383,7 @@ const styles = StyleSheet.create({
     dividerLine: { flex: 1, height: 1, backgroundColor: "#E0E0E0" },
     dividerText: { marginHorizontal: 10, color: "#7F8C8D" },
 
-    registerBtn: {
+    loginBtn: {
         backgroundColor: "#F8F9FA",
         height: 55,
         borderRadius: 15,
@@ -402,10 +392,10 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: "#E0E0E0",
     },
-    registerBtnText: { color: "#7F8C8D" },
-    registerHighlight: { color: "#FF8C42", fontWeight: "700" },
+    loginBtnText: { color: "#7F8C8D" },
+    loginHighlight: { color: "#6C63FF", fontWeight: "700" },
 
-    /* EXIT MODAL */
+    /* SUCCESS MODAL */
     modalOverlay: {
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.6)",
@@ -415,37 +405,62 @@ const styles = StyleSheet.create({
     dialogContainer: {
         width: "85%",
         backgroundColor: "#FFF",
-        padding: 25,
+        padding: 30,
         borderRadius: 20,
         alignItems: "center",
     },
-    dialogIcon: { fontSize: 40, marginBottom: 10 },
-    dialogTitle: { fontSize: 16, textAlign: "center", marginBottom: 10 },
-    dialogCountdown: { color: "#FF8C42", marginBottom: 20 },
+    successIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: "#F0F8FF",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 20,
+    },
+    successIcon: {
+        fontSize: 45,
+    },
+    dialogTitle: {
+        fontSize: 22,
+        fontWeight: "700",
+        textAlign: "center",
+        marginBottom: 15,
+        color: "#2C3E50",
+    },
+    dialogMessage: {
+        fontSize: 15,
+        color: "#7F8C8D",
+        textAlign: "center",
+        lineHeight: 22,
+        marginBottom: 25,
+    },
+    emailHighlight: {
+        color: "#6C63FF",
+        fontWeight: "600",
+    },
 
-    dialogButtons: {
-        flexDirection: "row",
+    dialogBtn: {
         width: "100%",
-        justifyContent: "space-between",
-    },
-    dialogBtnConfirm: {
-        flex: 1,
-        marginRight: 10,
-        backgroundColor: "#FFD93D",
-        height: 50,
-        borderRadius: 12,
+        backgroundColor: "#6C63FF",
+        height: 55,
+        borderRadius: 15,
         alignItems: "center",
         justifyContent: "center",
+        marginBottom: 15,
     },
-    dialogBtnConfirmText: { fontWeight: "700" },
+    dialogBtnText: {
+        color: "#FFF",
+        fontWeight: "700",
+        fontSize: 16,
+    },
 
-    dialogBtnCancel: {
-        flex: 1,
-        backgroundColor: "#00B4D8",
-        height: 50,
-        borderRadius: 12,
-        alignItems: "center",
-        justifyContent: "center",
+    resendText: {
+        fontSize: 14,
+        color: "#7F8C8D",
     },
-    dialogBtnCancelText: { color: "#FFF", fontWeight: "700" },
+    resendLink: {
+        color: "#6C63FF",
+        fontWeight: "600",
+    },
 });

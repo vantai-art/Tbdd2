@@ -1,62 +1,15 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Dimensions } from 'react-native';
+import { router } from 'expo-router';
+import React from 'react';
+import { Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useApp } from '../context/AppContext';
 
 const isWeb = Platform.OS === 'web';
 const windowWidth = Dimensions.get('window').width;
 
 export default function CartScreen() {
-    const [cartItems, setCartItems] = useState([
-        {
-            id: 1,
-            name: 'Phở bò tái',
-            price: 65000,
-            quantity: 2,
-            image: 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=400',
-            note: 'Không hành',
-        },
-        {
-            id: 2,
-            name: 'Bún bò Huế',
-            price: 70000,
-            quantity: 1,
-            image: 'https://images.unsplash.com/photo-1559847844-5315695dadae?w=400',
-            note: '',
-        },
-        {
-            id: 3,
-            name: 'Cơm tấm sườn nướng',
-            price: 75000,
-            quantity: 1,
-            image: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',
-            note: 'Thêm trứng',
-        },
-        {
-            id: 4,
-            name: 'Trà đá chanh',
-            price: 15000,
-            quantity: 3,
-            image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400',
-            note: '',
-        },
-    ]);
+    const { cart, updateQuantity, removeFromCart, clearCart } = useApp();
 
-    const updateQuantity = (id: number, delta: number) => {
-        setCartItems(items =>
-            items.map(item => {
-                if (item.id === id) {
-                    const newQuantity = Math.max(0, item.quantity + delta);
-                    return { ...item, quantity: newQuantity };
-                }
-                return item;
-            }).filter(item => item.quantity > 0)
-        );
-    };
-
-    const removeItem = (id: number) => {
-        setCartItems(items => items.filter(item => item.id !== id));
-    };
-
-    const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const shippingFee = subtotal > 0 ? 20000 : 0;
     const discount = subtotal > 200000 ? 30000 : 0;
     const total = subtotal + shippingFee - discount;
@@ -65,13 +18,36 @@ export default function CartScreen() {
         return amount.toLocaleString('vi-VN') + 'đ';
     };
 
+    const handleUpdateQuantity = (id: number, delta: number) => {
+        const item = cart.find(item => item.id === id);
+        if (item) {
+            const newQuantity = item.quantity + delta;
+            if (newQuantity > 0) {
+                updateQuantity?.(String(id), newQuantity);
+            } else {
+                removeFromCart?.(String(id));
+            }
+        }
+    };
+
+    const handleRemoveItem = (id: number) => {
+        removeFromCart?.(String(id));
+    };
+
+    const handleClearAll = () => {
+        clearCart?.();
+    };
+
     return (
         <View style={styles.container}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.headerContent}>
-                        <TouchableOpacity style={styles.backButton}>
+                        <TouchableOpacity
+                            style={styles.backButton}
+                            onPress={() => router.back()}
+                        >
                             <Text style={styles.backIcon}>←</Text>
                         </TouchableOpacity>
                         <View style={styles.headerTitleBox}>
@@ -79,14 +55,14 @@ export default function CartScreen() {
                             <Text style={styles.headerTitle}>Giỏ hàng của bạn</Text>
                         </View>
                         <View style={styles.cartBadge}>
-                            <Text style={styles.cartBadgeText}>{cartItems.length}</Text>
+                            <Text style={styles.cartBadgeText}>{cart.length}</Text>
                         </View>
                     </View>
                 </View>
 
                 {/* Main Content */}
                 <View style={styles.mainContent}>
-                    {cartItems.length === 0 ? (
+                    {cart.length === 0 ? (
                         // Empty Cart
                         <View style={styles.emptyCart}>
                             <View style={styles.emptyCartIcon}>
@@ -96,7 +72,10 @@ export default function CartScreen() {
                             <Text style={styles.emptyCartDesc}>
                                 Hãy thêm món ăn yêu thích vào giỏ hàng nhé!
                             </Text>
-                            <TouchableOpacity style={styles.shopNowButton}>
+                            <TouchableOpacity
+                                style={styles.shopNowButton}
+                                onPress={() => router.push('/(tabs)/home')}
+                            >
                                 <Text style={styles.shopNowText}>Khám phá món ngon</Text>
                                 <Text style={styles.shopNowIcon}>→</Text>
                             </TouchableOpacity>
@@ -120,14 +99,14 @@ export default function CartScreen() {
                                 <View style={styles.cartItemsContainer}>
                                     <View style={styles.cartHeader}>
                                         <Text style={styles.cartHeaderTitle}>
-                                            Món đã chọn ({cartItems.length})
+                                            Món đã chọn ({cart.length})
                                         </Text>
-                                        <TouchableOpacity>
+                                        <TouchableOpacity onPress={handleClearAll}>
                                             <Text style={styles.clearAllText}>🗑️ Xóa tất cả</Text>
                                         </TouchableOpacity>
                                     </View>
 
-                                    {cartItems.map((item) => (
+                                    {cart.map((item) => (
                                         <View key={item.id} style={styles.cartItem}>
                                             <Image
                                                 source={{ uri: item.image }}
@@ -149,14 +128,14 @@ export default function CartScreen() {
                                                     <View style={styles.quantityControl}>
                                                         <TouchableOpacity
                                                             style={styles.quantityButton}
-                                                            onPress={() => updateQuantity(item.id, -1)}
+                                                            onPress={() => handleUpdateQuantity(item.id, -1)}
                                                         >
                                                             <Text style={styles.quantityButtonText}>−</Text>
                                                         </TouchableOpacity>
                                                         <Text style={styles.quantityText}>{item.quantity}</Text>
                                                         <TouchableOpacity
                                                             style={styles.quantityButton}
-                                                            onPress={() => updateQuantity(item.id, 1)}
+                                                            onPress={() => handleUpdateQuantity(item.id, 1)}
                                                         >
                                                             <Text style={styles.quantityButtonText}>+</Text>
                                                         </TouchableOpacity>
@@ -165,7 +144,7 @@ export default function CartScreen() {
                                             </View>
                                             <TouchableOpacity
                                                 style={styles.removeButton}
-                                                onPress={() => removeItem(item.id)}
+                                                onPress={() => handleRemoveItem(item.id)}
                                             >
                                                 <Text style={styles.removeIcon}>×</Text>
                                             </TouchableOpacity>
