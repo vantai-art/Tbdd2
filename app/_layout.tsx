@@ -97,32 +97,7 @@ export default function RootLayout() {
           <Stack.Screen name="auth/register" />
           <Stack.Screen name="auth/forgot-password" />
 
-          {/* ================== SHIPPER ================== */}
-          {/* Shipper Auth */}
-          <Stack.Screen name="shipper/auth/login" />
-          <Stack.Screen name="shipper/auth/_layout" />
 
-          {/* Shipper Main Screens */}
-          <Stack.Screen name="shipper/earnings" />
-          <Stack.Screen name="shipper/map" />
-          <Stack.Screen name="shipper/notifications" />
-          <Stack.Screen name="shipper/order-detail" />
-          <Stack.Screen name="shipper/orders" />
-          <Stack.Screen name="shipper/profile" />
-          <Stack.Screen name="shipper/_layout" />
-
-          {/* ================== STAFF ================== */}
-          {/* Staff Auth */}
-          <Stack.Screen name="staff/auth/login" />
-          <Stack.Screen name="staff/auth/_layout" />
-
-          {/* Staff Main Screens */}
-          <Stack.Screen name="staff/inventory" />
-          <Stack.Screen name="staff/kitchen" />
-          <Stack.Screen name="staff/orders" />
-          <Stack.Screen name="staff/profile" />
-          <Stack.Screen name="staff/_layout" />
-          <Stack.Screen name="staff/index" />
 
           {/* ================== MAIN TABS (User) ================== */}
           <Stack.Screen name="(tabs)" />
