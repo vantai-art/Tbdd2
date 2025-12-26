@@ -1,33 +1,35 @@
+// app/auth/login.tsx
 // @ts-nocheck
-import React, { useState, useEffect, useRef } from "react";
+import { router } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
-    View,
+    Alert,
+    BackHandler,
+    Dimensions,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet,
-    KeyboardAvoidingView,
-    Platform,
-    Keyboard,
-    Dimensions,
-    BackHandler,
-    Modal,
+    View,
 } from "react-native";
-import { router } from "expo-router";
 import Animated, {
-    useSharedValue,
-    useAnimatedStyle,
-    withSpring,
-    withSequence,
-    withTiming,
     FadeInDown,
+    useAnimatedStyle,
+    useSharedValue,
+    withSequence,
+    withSpring,
+    withTiming,
 } from "react-native-reanimated";
+import { AuthAPI } from '../services/api';
 
 const { width, height } = Dimensions.get("window");
-const isWeb = Platform.OS === "web";
 
 export default function Login() {
-    const [email, setEmail] = useState("");
+    const [email, setEmail] = useState(""); // ✅ Đổi sang email
     const [password, setPassword] = useState("");
     const [focusedInput, setFocusedInput] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -36,7 +38,7 @@ export default function Login() {
     const [countdown, setCountdown] = useState(10);
 
     const [errors, setErrors] = useState({
-        email: "",
+        email: "", // ✅ Đổi sang email
         password: ""
     });
 
@@ -83,10 +85,10 @@ export default function Login() {
         ]
     }));
 
+    // ✅ Validate email (cho phép cả email và username)
     const validateEmail = (email: string) => {
-        if (!email) return "Vui lòng nhập email";
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) return "Email không hợp lệ";
+        if (!email) return "Vui lòng nhập email hoặc tên đăng nhập";
+        if (email.length < 3) return "Email/Tên đăng nhập phải có ít nhất 3 ký tự";
         return "";
     };
 
@@ -101,7 +103,6 @@ export default function Login() {
 
         const emailError = validateEmail(email);
         const passwordError = validatePassword(password);
-
         setErrors({ email: emailError, password: passwordError });
 
         if (emailError || passwordError) return;
@@ -112,10 +113,67 @@ export default function Login() {
             withTiming(1, { duration: 100 })
         );
 
-        await new Promise(res => setTimeout(res, 1500));
+        try {
+            console.log('🔐 [LOGIN] Starting login for:', email);
 
-        setIsLoading(false);
-        router.replace("/(tabs)/home");
+            // ✅ Gọi API - backend sẽ tự động check cả username và email
+            const data = await AuthAPI.login(email, password);
+
+            console.log('✅ [LOGIN] API Response:', data);
+            console.log('👤 [LOGIN] User role:', data.role);
+
+            // ✅ Kiểm tra role
+            if (data.role === 'ADMIN' || data.role === 'EMPLOYEE' || data.role === 'STAFF') {
+                console.warn('⚠️ [LOGIN] Non-USER role detected:', data.role);
+                await AuthAPI.logout();
+
+                Alert.alert(
+                    '⚠️ Không thể đăng nhập',
+                    'Vui lòng sử dụng trang đăng nhập dành cho quản trị viên.',
+                    [{ text: 'OK' }]
+                );
+                return;
+            }
+
+            console.log('✅ [LOGIN] User role valid');
+            console.log('🚀 [LOGIN] Navigating to home...');
+
+            // ✅ NAVIGATE
+            router.replace('/(tabs)/home');
+
+            console.log('✅ [LOGIN] Navigation completed');
+
+            setTimeout(() => {
+                Alert.alert(
+                    '✅ Thành công',
+                    `Chào mừng ${data.fullName || data.username}!`,
+                    [{ text: 'OK' }]
+                );
+            }, 500);
+
+        } catch (error: any) {
+            console.error('❌ [LOGIN] Error:', error);
+
+            let errorMessage = 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+
+            if (error.message) {
+                if (error.message.includes('Login failed') || error.message.includes('không tồn tại')) {
+                    errorMessage = 'Email/Tên đăng nhập hoặc mật khẩu không đúng';
+                } else if (error.message.includes('khóa')) {
+                    errorMessage = 'Tài khoản của bạn đã bị khóa';
+                } else if (error.message.includes('Network') || error.message.includes('fetch')) {
+                    errorMessage = 'Không thể kết nối đến server.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+
+            Alert.alert('❌ Đăng nhập thất bại', errorMessage, [{ text: 'OK' }]);
+
+        } finally {
+            console.log('🏁 [LOGIN] Process finished');
+            setIsLoading(false);
+        }
     };
 
     const handleExitApp = () => {
@@ -151,7 +209,7 @@ export default function Login() {
                     <Text style={styles.welcomeText}>Chào mừng trở lại! 👋</Text>
                     <Text style={styles.subtitle}>Đăng nhập để tiếp tục</Text>
 
-                    {/* EMAIL */}
+                    {/* EMAIL/USERNAME */}
                     <View
                         style={[
                             styles.inputContainer,
@@ -162,16 +220,22 @@ export default function Login() {
                         <Text style={styles.inputIcon}>📧</Text>
                         <TextInput
                             ref={emailInputRef}
-                            placeholder="Email"
+                            placeholder="Email hoặc tên đăng nhập"
                             value={email}
-                            onChangeText={setEmail}
+                            onChangeText={(text) => {
+                                setEmail(text);
+                                if (errors.email) {
+                                    setErrors(prev => ({ ...prev, email: "" }));
+                                }
+                            }}
                             style={styles.input}
-                            keyboardType="email-address"
                             autoCapitalize="none"
+                            keyboardType="email-address"
                             onFocus={() => setFocusedInput("email")}
                             onBlur={() => setFocusedInput("")}
                             returnKeyType="next"
                             onSubmitEditing={() => passwordInputRef.current?.focus()}
+                            editable={!isLoading}
                         />
                     </View>
                     {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : <View style={{ height: 18 }} />}
@@ -190,12 +254,18 @@ export default function Login() {
                             placeholder="Mật khẩu"
                             value={password}
                             secureTextEntry={!showPassword}
-                            onChangeText={setPassword}
+                            onChangeText={(text) => {
+                                setPassword(text);
+                                if (errors.password) {
+                                    setErrors(prev => ({ ...prev, password: "" }));
+                                }
+                            }}
                             style={styles.input}
                             onFocus={() => setFocusedInput("password")}
                             onBlur={() => setFocusedInput("")}
                             returnKeyType="done"
                             onSubmitEditing={handleLogin}
+                            editable={!isLoading}
                         />
                         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                             <Text style={{ fontSize: 20 }}>{showPassword ? "👁️" : "👁️‍🗨️"}</Text>
@@ -204,7 +274,10 @@ export default function Login() {
                     {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : <View style={{ height: 18 }} />}
 
                     {/* FORGOT PASSWORD */}
-                    <TouchableOpacity onPress={() => router.push("/auth/forgot-password")}>
+                    <TouchableOpacity
+                        onPress={() => router.push("/auth/forgot-password")}
+                        disabled={isLoading}
+                    >
                         <Text style={styles.forgotText}>Quên mật khẩu?</Text>
                     </TouchableOpacity>
 
@@ -230,6 +303,7 @@ export default function Login() {
                     <TouchableOpacity
                         style={styles.registerBtn}
                         onPress={() => router.push("/auth/register")}
+                        disabled={isLoading}
                     >
                         <Text style={styles.registerBtnText}>
                             Chưa có tài khoản?
@@ -269,6 +343,8 @@ export default function Login() {
     );
 }
 
+// Styles giữ nguyên
+
 /* ==================== STYLES ==================== */
 
 const styles = StyleSheet.create({
@@ -302,7 +378,6 @@ const styles = StyleSheet.create({
         pointerEvents: "none",
     },
 
-    /* LOGO */
     logoSection: {
         alignItems: "center",
         marginTop: 40,
@@ -332,7 +407,6 @@ const styles = StyleSheet.create({
     welcomeText: { fontSize: 26, fontWeight: "700", marginBottom: 5 },
     subtitle: { color: "#7F8C8D", marginBottom: 20 },
 
-    /* INPUT */
     inputContainer: {
         flexDirection: "row",
         alignItems: "center",
@@ -405,7 +479,6 @@ const styles = StyleSheet.create({
     registerBtnText: { color: "#7F8C8D" },
     registerHighlight: { color: "#FF8C42", fontWeight: "700" },
 
-    /* EXIT MODAL */
     modalOverlay: {
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.6)",

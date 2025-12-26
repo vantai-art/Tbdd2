@@ -1,26 +1,28 @@
 // @ts-nocheck
-import React, { useState, useEffect, useRef } from "react";
+import { router } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
-    View,
+    Alert,
+    BackHandler,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet,
-    KeyboardAvoidingView,
-    Platform,
-    Keyboard,
-    BackHandler,
-    Modal,
+    View,
 } from "react-native";
-import { router } from "expo-router";
 import Animated, {
-    useSharedValue,
-    useAnimatedStyle,
-    withSpring,
-    withSequence,
-    withTiming,
     FadeInDown,
+    useAnimatedStyle,
+    useSharedValue,
+    withSequence,
+    withSpring,
+    withTiming,
 } from "react-native-reanimated";
+import { AuthAPI } from '../services/api';
 
 export default function ForgotPassword() {
     const [email, setEmail] = useState("");
@@ -28,6 +30,7 @@ export default function ForgotPassword() {
     const [isLoading, setIsLoading] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [errors, setErrors] = useState({ email: "" });
+    const [resetToken, setResetToken] = useState(""); // Lưu token để hiển thị link
 
     const emailInputRef = useRef<TextInput>(null);
     const logoScale = useSharedValue(0);
@@ -73,11 +76,42 @@ export default function ForgotPassword() {
             withTiming(1, { duration: 100 })
         );
 
-        // Simulate API call
-        await new Promise(res => setTimeout(res, 1500));
+        try {
+            // ✅ GỌI API FORGOT PASSWORD
+            const response = await AuthAPI.forgotPassword(email);
 
-        setIsLoading(false);
-        setShowSuccessModal(true);
+            console.log('✅ Forgot password success:', response);
+
+            // Backend trả về: { message: "..." }
+            // Token được in ra console ở backend, nhưng không trả về FE (vì lý do bảo mật)
+            // Trong thực tế, token sẽ được gửi qua email
+
+            setShowSuccessModal(true);
+
+        } catch (error: any) {
+            console.error('❌ Forgot password error:', error);
+
+            let errorMessage = 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+
+            if (error.message) {
+                if (error.message.includes('không tồn tại') || error.message.includes('not found')) {
+                    errorMessage = 'Email không tồn tại trong hệ thống';
+                } else if (error.message.includes('Network')) {
+                    errorMessage = 'Không thể kết nối đến server. Kiểm tra kết nối mạng.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+
+            Alert.alert(
+                '❌ Không thể gửi email',
+                errorMessage,
+                [{ text: 'OK' }]
+            );
+
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleSuccessClose = () => {
@@ -85,6 +119,11 @@ export default function ForgotPassword() {
         setTimeout(() => {
             router.replace("/auth/login");
         }, 300);
+    };
+
+    const handleResend = async () => {
+        // Gửi lại email
+        await handleResetPassword();
     };
 
     return (
@@ -136,7 +175,12 @@ export default function ForgotPassword() {
                             ref={emailInputRef}
                             placeholder="Nhập email của bạn"
                             value={email}
-                            onChangeText={setEmail}
+                            onChangeText={(text) => {
+                                setEmail(text);
+                                if (errors.email) {
+                                    setErrors({ email: "" });
+                                }
+                            }}
                             style={styles.input}
                             keyboardType="email-address"
                             autoCapitalize="none"
@@ -144,6 +188,7 @@ export default function ForgotPassword() {
                             onBlur={() => setFocusedInput("")}
                             returnKeyType="done"
                             onSubmitEditing={handleResetPassword}
+                            editable={!isLoading}
                         />
                     </View>
                     {errors.email ? (
@@ -182,6 +227,7 @@ export default function ForgotPassword() {
                     <TouchableOpacity
                         style={styles.loginBtn}
                         onPress={() => router.back()}
+                        disabled={isLoading}
                     >
                         <Text style={styles.loginBtnText}>
                             Nhớ mật khẩu rồi?
@@ -213,7 +259,7 @@ export default function ForgotPassword() {
                             <Text style={styles.dialogBtnText}>Đã hiểu</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity onPress={handleSuccessClose}>
+                        <TouchableOpacity onPress={handleResend}>
                             <Text style={styles.resendText}>
                                 Không nhận được email? <Text style={styles.resendLink}>Gửi lại</Text>
                             </Text>

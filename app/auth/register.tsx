@@ -1,34 +1,38 @@
 // @ts-nocheck
-import React, { useState, useEffect, useRef } from "react";
+import { router } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
-    View,
+    Alert,
+    BackHandler,
+    Dimensions,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet,
-    KeyboardAvoidingView,
-    Platform,
-    Keyboard,
-    Dimensions,
-    BackHandler,
-    Modal,
+    View,
 } from "react-native";
-import { router } from "expo-router";
 import Animated, {
-    useSharedValue,
-    useAnimatedStyle,
-    withSpring,
-    withSequence,
-    withTiming,
     FadeInDown,
+    useAnimatedStyle,
+    useSharedValue,
+    withSequence,
+    withSpring,
+    withTiming,
 } from "react-native-reanimated";
+import { AuthAPI } from '../services/api';
 
 const { width, height } = Dimensions.get("window");
 const isWeb = Platform.OS === "web";
 
 export default function Register() {
-    const [name, setName] = useState("");
+    const [username, setUsername] = useState("");
+    const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
     const [password, setPassword] = useState("");
     const [confirm, setConfirm] = useState("");
     const [focusedInput, setFocusedInput] = useState("");
@@ -39,14 +43,18 @@ export default function Register() {
     const [countdown, setCountdown] = useState(10);
 
     const [errors, setErrors] = useState({
-        name: "",
+        username: "",
+        fullName: "",
         email: "",
+        phone: "",
         password: "",
         confirm: ""
     });
 
-    const nameInputRef = useRef<TextInput>(null);
+    const usernameInputRef = useRef<TextInput>(null);
+    const fullNameInputRef = useRef<TextInput>(null);
     const emailInputRef = useRef<TextInput>(null);
+    const phoneInputRef = useRef<TextInput>(null);
     const passwordInputRef = useRef<TextInput>(null);
     const confirmInputRef = useRef<TextInput>(null);
 
@@ -90,9 +98,15 @@ export default function Register() {
         ]
     }));
 
-    const validateName = (name: string) => {
-        if (!name) return "Vui lòng nhập họ và tên";
-        if (name.length < 2) return "Tên phải có ít nhất 2 ký tự";
+    const validateUsername = (username: string) => {
+        if (!username) return "Vui lòng nhập tên đăng nhập";
+        if (username.length < 3) return "Tên đăng nhập phải có ít nhất 3 ký tự";
+        return "";
+    };
+
+    const validateFullName = (fullName: string) => {
+        if (!fullName) return "Vui lòng nhập họ và tên";
+        if (fullName.length < 2) return "Họ tên phải có ít nhất 2 ký tự";
         return "";
     };
 
@@ -100,6 +114,13 @@ export default function Register() {
         if (!email) return "Vui lòng nhập email";
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) return "Email không hợp lệ";
+        return "";
+    };
+
+    const validatePhone = (phone: string) => {
+        if (!phone) return "Vui lòng nhập số điện thoại";
+        const phoneRegex = /^[0-9]{10,11}$/;
+        if (!phoneRegex.test(phone)) return "Số điện thoại không hợp lệ";
         return "";
     };
 
@@ -118,19 +139,26 @@ export default function Register() {
     const handleRegister = async () => {
         Keyboard.dismiss();
 
-        const nameError = validateName(name);
+        // Validate all fields
+        const usernameError = validateUsername(username);
+        const fullNameError = validateFullName(fullName);
         const emailError = validateEmail(email);
+        const phoneError = validatePhone(phone);
         const passwordError = validatePassword(password);
         const confirmError = validateConfirm(confirm, password);
 
         setErrors({
-            name: nameError,
+            username: usernameError,
+            fullName: fullNameError,
             email: emailError,
+            phone: phoneError,
             password: passwordError,
             confirm: confirmError
         });
 
-        if (nameError || emailError || passwordError || confirmError) return;
+        if (usernameError || fullNameError || emailError || phoneError || passwordError || confirmError) {
+            return;
+        }
 
         setIsLoading(true);
         logoScale.value = withSequence(
@@ -138,11 +166,49 @@ export default function Register() {
             withTiming(1, { duration: 100 })
         );
 
-        await new Promise(res => setTimeout(res, 1500));
+        try {
+            // ✅ GỌI API SIGNUP
+            // async signup(username, password, fullName, email, phone)
+            await AuthAPI.signup(username, password, fullName, email, phone);
 
-        setIsLoading(false);
-        alert("Đăng ký thành công!");
-        router.replace("/auth/login");
+            console.log('✅ Signup success');
+
+            Alert.alert(
+                'Đăng ký thành công! 🎉',
+                'Tài khoản của bạn đã được tạo. Hãy đăng nhập để tiếp tục.',
+                [
+                    {
+                        text: 'Đăng nhập ngay',
+                        onPress: () => router.replace('/auth/login')
+                    }
+                ]
+            );
+
+        } catch (error: any) {
+            console.error('❌ Signup error:', error);
+
+            // Xử lý lỗi
+            let errorMessage = 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+
+            if (error.message) {
+                if (error.message.includes('already exists') || error.message.includes('đã tồn tại')) {
+                    errorMessage = 'Tên đăng nhập hoặc email đã được sử dụng';
+                } else if (error.message.includes('Network')) {
+                    errorMessage = 'Không thể kết nối đến server. Kiểm tra kết nối mạng.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+
+            Alert.alert(
+                'Đăng ký thất bại',
+                errorMessage,
+                [{ text: 'OK' }]
+            );
+
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleExitApp = () => {
@@ -179,29 +245,66 @@ export default function Register() {
                     <Text style={styles.welcomeText}>Xin chào! 🎉</Text>
                     <Text style={styles.subtitle}>Điền thông tin để đăng ký</Text>
 
-                    {/* NAME */}
+                    {/* USERNAME */}
                     <View
                         style={[
                             styles.inputContainer,
-                            focusedInput === "name" && styles.inputFocused,
-                            errors.name && styles.inputError
+                            focusedInput === "username" && styles.inputFocused,
+                            errors.username && styles.inputError
                         ]}
                     >
                         <Text style={styles.inputIcon}>👤</Text>
                         <TextInput
-                            ref={nameInputRef}
+                            ref={usernameInputRef}
+                            placeholder="Tên đăng nhập"
+                            value={username}
+                            onChangeText={(text) => {
+                                setUsername(text);
+                                if (errors.username) {
+                                    setErrors(prev => ({ ...prev, username: "" }));
+                                }
+                            }}
+                            style={styles.input}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            onFocus={() => setFocusedInput("username")}
+                            onBlur={() => setFocusedInput("")}
+                            returnKeyType="next"
+                            onSubmitEditing={() => fullNameInputRef.current?.focus()}
+                            editable={!isLoading}
+                        />
+                    </View>
+                    {errors.username ? <Text style={styles.errorText}>{errors.username}</Text> : <View style={{ height: 18 }} />}
+
+                    {/* FULL NAME */}
+                    <View
+                        style={[
+                            styles.inputContainer,
+                            focusedInput === "fullName" && styles.inputFocused,
+                            errors.fullName && styles.inputError
+                        ]}
+                    >
+                        <Text style={styles.inputIcon}>✏️</Text>
+                        <TextInput
+                            ref={fullNameInputRef}
                             placeholder="Họ và tên"
-                            value={name}
-                            onChangeText={setName}
+                            value={fullName}
+                            onChangeText={(text) => {
+                                setFullName(text);
+                                if (errors.fullName) {
+                                    setErrors(prev => ({ ...prev, fullName: "" }));
+                                }
+                            }}
                             style={styles.input}
                             autoCorrect={false}
-                            onFocus={() => setFocusedInput("name")}
+                            onFocus={() => setFocusedInput("fullName")}
                             onBlur={() => setFocusedInput("")}
                             returnKeyType="next"
                             onSubmitEditing={() => emailInputRef.current?.focus()}
+                            editable={!isLoading}
                         />
                     </View>
-                    {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : <View style={{ height: 18 }} />}
+                    {errors.fullName ? <Text style={styles.errorText}>{errors.fullName}</Text> : <View style={{ height: 18 }} />}
 
                     {/* EMAIL */}
                     <View
@@ -216,17 +319,53 @@ export default function Register() {
                             ref={emailInputRef}
                             placeholder="Email"
                             value={email}
-                            onChangeText={setEmail}
+                            onChangeText={(text) => {
+                                setEmail(text);
+                                if (errors.email) {
+                                    setErrors(prev => ({ ...prev, email: "" }));
+                                }
+                            }}
                             style={styles.input}
                             keyboardType="email-address"
                             autoCapitalize="none"
                             onFocus={() => setFocusedInput("email")}
                             onBlur={() => setFocusedInput("")}
                             returnKeyType="next"
-                            onSubmitEditing={() => passwordInputRef.current?.focus()}
+                            onSubmitEditing={() => phoneInputRef.current?.focus()}
+                            editable={!isLoading}
                         />
                     </View>
                     {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : <View style={{ height: 18 }} />}
+
+                    {/* PHONE */}
+                    <View
+                        style={[
+                            styles.inputContainer,
+                            focusedInput === "phone" && styles.inputFocused,
+                            errors.phone && styles.inputError
+                        ]}
+                    >
+                        <Text style={styles.inputIcon}>📱</Text>
+                        <TextInput
+                            ref={phoneInputRef}
+                            placeholder="Số điện thoại"
+                            value={phone}
+                            onChangeText={(text) => {
+                                setPhone(text);
+                                if (errors.phone) {
+                                    setErrors(prev => ({ ...prev, phone: "" }));
+                                }
+                            }}
+                            style={styles.input}
+                            keyboardType="phone-pad"
+                            onFocus={() => setFocusedInput("phone")}
+                            onBlur={() => setFocusedInput("")}
+                            returnKeyType="next"
+                            onSubmitEditing={() => passwordInputRef.current?.focus()}
+                            editable={!isLoading}
+                        />
+                    </View>
+                    {errors.phone ? <Text style={styles.errorText}>{errors.phone}</Text> : <View style={{ height: 18 }} />}
 
                     {/* PASSWORD */}
                     <View
@@ -242,12 +381,18 @@ export default function Register() {
                             placeholder="Mật khẩu (tối thiểu 6 ký tự)"
                             value={password}
                             secureTextEntry={!showPassword}
-                            onChangeText={setPassword}
+                            onChangeText={(text) => {
+                                setPassword(text);
+                                if (errors.password) {
+                                    setErrors(prev => ({ ...prev, password: "" }));
+                                }
+                            }}
                             style={styles.input}
                             onFocus={() => setFocusedInput("password")}
                             onBlur={() => setFocusedInput("")}
                             returnKeyType="next"
                             onSubmitEditing={() => confirmInputRef.current?.focus()}
+                            editable={!isLoading}
                         />
                         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                             <Text style={{ fontSize: 20 }}>{showPassword ? "👁️" : "👁️‍🗨️"}</Text>
@@ -269,12 +414,18 @@ export default function Register() {
                             placeholder="Nhập lại mật khẩu"
                             value={confirm}
                             secureTextEntry={!showConfirm}
-                            onChangeText={setConfirm}
+                            onChangeText={(text) => {
+                                setConfirm(text);
+                                if (errors.confirm) {
+                                    setErrors(prev => ({ ...prev, confirm: "" }));
+                                }
+                            }}
                             style={styles.input}
                             onFocus={() => setFocusedInput("confirm")}
                             onBlur={() => setFocusedInput("")}
                             returnKeyType="done"
                             onSubmitEditing={handleRegister}
+                            editable={!isLoading}
                         />
                         <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
                             <Text style={{ fontSize: 20 }}>{showConfirm ? "👁️" : "👁️‍🗨️"}</Text>
@@ -313,6 +464,7 @@ export default function Register() {
                     <TouchableOpacity
                         style={styles.loginBtn}
                         onPress={() => router.push("/auth/login")}
+                        disabled={isLoading}
                     >
                         <Text style={styles.loginBtnText}>
                             Đã có tài khoản?
