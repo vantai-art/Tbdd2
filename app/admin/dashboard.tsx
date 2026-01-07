@@ -160,10 +160,12 @@ export default function AdminDashboard() {
     const quickActions = [
         { id: 1, title: 'Đơn hàng', icon: '📋', route: '/admin/orders', color: '#3B82F6' },
         { id: 2, title: 'Sản phẩm', icon: '🍽️', route: '/admin/products', color: '#10B981' },
-        { id: 3, title: 'Người dùng', icon: '👤', route: '/admin/users', color: '#8B5CF6' },
-        { id: 4, title: 'Nhân viên', icon: '👨‍💼', route: '/admin/staff', color: '#F59E0B' },
-        { id: 5, title: 'Shipper', icon: '🚚', route: '/admin/shippers', color: '#06B6D4' },
-        { id: 6, title: 'Doanh thu', icon: '📊', route: '/admin/revenue', color: '#EC4899' },
+        { id: 7, title: 'Sửa ảnh', icon: '🖼️', route: '/admin/fix-images', color: '#EC4899' },
+        { id: 3, title: 'Danh mục', icon: '📂', route: '/admin/categories', color: '#8B5CF6' },
+        { id: 4, title: 'Người dùng', icon: '👤', route: '/admin/users', color: '#8B5CF6' },
+        { id: 5, title: 'Nhân viên', icon: '👨‍💼', route: '/admin/staff', color: '#F59E0B' },
+        { id: 6, title: 'Shipper', icon: '🚚', route: '/admin/shippers', color: '#06B6D4' },
+        { id: 8, title: 'Doanh thu', icon: '📊', route: '/admin/revenue', color: '#EC4899' },
     ];
 
     const notifications = [

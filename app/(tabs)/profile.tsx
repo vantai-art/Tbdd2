@@ -1,18 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    Image,
-    Switch,
-    Platform,
-    Modal
-} from 'react-native';
 import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import { API_CONFIG } from '../config/api';
 
 const isWeb = Platform.OS === 'web';
+const API_BASE_URL = API_CONFIG.BASE_URL;
+
+// Types
+interface Settings {
+    id?: number;
+    storeName?: string;
+    storeEmail?: string;
+    storePhone?: string;
+    storeAddress?: string;
+    emailNotifications?: boolean;
+    orderNotifications?: boolean;
+    promotionNotifications?: boolean;
+    currency?: string;
+    timezone?: string;
+    language?: string;
+    taxRate?: number;
+    themeColor?: string;
+    darkMode?: boolean;
+    freeShippingThreshold?: number;
+    shippingFee?: number;
+}
 
 type MenuItemProps = {
     icon: string;
@@ -31,12 +55,98 @@ type SectionHeaderProps = {
 };
 
 export default function ProfileScreen() {
-    const [pushNotifications, setPushNotifications] = useState(true);
-    const [emailNotifications, setEmailNotifications] = useState(false);
-    const [darkMode, setDarkMode] = useState(false);
+    // Settings State
+    const [settings, setSettings] = useState<Settings | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    // Local UI State
     const [showLogoutDialog, setShowLogoutDialog] = useState(false);
     const [countdown, setCountdown] = useState(10);
 
+    useEffect(() => {
+        fetchSettings();
+    }, []);
+
+    // Fetch Settings from Backend
+    const fetchSettings = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch(`${API_BASE_URL}/settings`);
+
+            if (!response.ok) {
+                console.warn("⚠️ Settings endpoint not available, using defaults");
+                setSettings({
+                    storeName: "Quán Ngon",
+                    storeEmail: "hello@quanngon.vn",
+                    storePhone: "1900 1234",
+                    storeAddress: "123 Nguyễn Huệ, Q.1, TP.HCM",
+                    emailNotifications: false,
+                    orderNotifications: true,
+                    promotionNotifications: true,
+                    darkMode: false,
+                    language: "vi"
+                });
+                return;
+            }
+
+            const data: Settings = await response.json();
+            console.log("✅ Settings loaded:", data);
+            setSettings(data);
+        } catch (error) {
+            console.error("❌ Error fetching settings:", error);
+            Alert.alert("Lỗi", "Không thể tải cài đặt");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Update Settings to Backend
+    const updateSettings = async (updatedSettings: Partial<Settings>) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/settings`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ...settings,
+                    ...updatedSettings
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update settings');
+
+            const data: Settings = await response.json();
+            setSettings(data);
+            console.log("✅ Settings updated:", data);
+        } catch (error) {
+            console.error("❌ Error updating settings:", error);
+            Alert.alert("Lỗi", "Không thể cập nhật cài đặt");
+        }
+    };
+
+    // Handle notification switches
+    const handleEmailNotifications = (value: boolean) => {
+        setSettings(prev => prev ? { ...prev, emailNotifications: value } : null);
+        updateSettings({ emailNotifications: value });
+    };
+
+    const handleOrderNotifications = (value: boolean) => {
+        setSettings(prev => prev ? { ...prev, orderNotifications: value } : null);
+        updateSettings({ orderNotifications: value });
+    };
+
+    const handlePromotionNotifications = (value: boolean) => {
+        setSettings(prev => prev ? { ...prev, promotionNotifications: value } : null);
+        updateSettings({ promotionNotifications: value });
+    };
+
+    const handleDarkMode = (value: boolean) => {
+        setSettings(prev => prev ? { ...prev, darkMode: value } : null);
+        updateSettings({ darkMode: value });
+    };
+
+    // Logout countdown timer
     useEffect(() => {
         if (showLogoutDialog) {
             setCountdown(10);
@@ -62,11 +172,23 @@ export default function ProfileScreen() {
         }, 200);
     };
 
-    const MenuItem = ({ icon, title, subtitle, onPress, showArrow = true, badge, showSwitch, switchValue, onSwitchChange }: MenuItemProps) => (
+    // Components
+    const MenuItem = ({
+        icon,
+        title,
+        subtitle,
+        onPress,
+        showArrow = true,
+        badge,
+        showSwitch,
+        switchValue,
+        onSwitchChange
+    }: MenuItemProps) => (
         <TouchableOpacity
             style={styles.menuItem}
             onPress={onPress}
             activeOpacity={0.7}
+            disabled={showSwitch}
         >
             <View style={styles.menuLeft}>
                 <View style={styles.iconContainer}>
@@ -103,6 +225,15 @@ export default function ProfileScreen() {
         </View>
     );
 
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#FF8A3D" />
+                <Text style={styles.loadingText}>Đang tải cài đặt...</Text>
+            </View>
+        );
+    }
+
     return (
         <View style={styles.container}>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -118,7 +249,10 @@ export default function ProfileScreen() {
                                 <Text style={styles.editIcon}>✏️</Text>
                             </View>
                         </View>
-                        <TouchableOpacity style={styles.settingsButton}>
+                        <TouchableOpacity
+                            style={styles.settingsButton}
+                            onPress={() => Alert.alert("Cài đặt", "Chức năng đang phát triển")}
+                        >
                             <Text style={styles.settingsIcon}>⚙️</Text>
                         </TouchableOpacity>
                     </View>
@@ -127,180 +261,72 @@ export default function ProfileScreen() {
                         <Text style={styles.profileName}>Ngô Văn Tài</Text>
                         <View style={styles.ratingContainer}>
                             <Text style={styles.starIcon}>⭐</Text>
-                            <Text style={styles.ratingText}>5</Text>
+                            <Text style={styles.ratingText}>5.0</Text>
                             <Text style={styles.ratingDivider}>•</Text>
-                            <Text style={styles.phoneText}>+84328778198</Text>
+                            <Text style={styles.phoneText}>+84 328 778 198</Text>
                         </View>
                         <View style={styles.memberBadge}>
                             <Text style={styles.memberIcon}>💎</Text>
-                            <Text style={styles.memberText}>THÀNH VIÊN</Text>
+                            <Text style={styles.memberText}>THÀNH VIÊN VIP</Text>
                         </View>
                     </View>
                 </View>
 
-                {/* Stats Cards */}
-                <View style={styles.statsContainer}>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>24</Text>
-                        <Text style={styles.statLabel}>Đơn hàng</Text>
+                {/* Store Info Card */}
+                <View style={styles.storeInfoCard}>
+                    <Text style={styles.storeInfoTitle}>🏪 Thông tin cửa hàng</Text>
+                    <View style={styles.storeInfoRow}>
+                        <Text style={styles.storeInfoLabel}>Tên:</Text>
+                        <Text style={styles.storeInfoValue}>{settings?.storeName || "Chưa cập nhật"}</Text>
                     </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>3</Text>
-                        <Text style={styles.statLabel}>Đang giao</Text>
+                    <View style={styles.storeInfoRow}>
+                        <Text style={styles.storeInfoLabel}>Email:</Text>
+                        <Text style={styles.storeInfoValue}>{settings?.storeEmail || "Chưa cập nhật"}</Text>
                     </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>₫2.5M</Text>
-                        <Text style={styles.statLabel}>Tích lũy</Text>
+                    <View style={styles.storeInfoRow}>
+                        <Text style={styles.storeInfoLabel}>Điện thoại:</Text>
+                        <Text style={styles.storeInfoValue}>{settings?.storePhone || "Chưa cập nhật"}</Text>
                     </View>
-                </View>
-
-                {/* Quản lý */}
-                <SectionHeader title="Quản lý" />
-                <View style={styles.menuSection}>
-                    <MenuItem
-                        icon="📊"
-                        title="Quản lý chi tiêu"
-                        subtitle="Theo dõi chi tiêu của bạn"
-                        onPress={() => { }}
-                    />
-                    <MenuItem
-                        icon="📅"
-                        title="Kế hoạch di chuyển"
-                        subtitle="Lên lịch đặt xe trước"
-                        onPress={() => { }}
-                    />
-                    <MenuItem
-                        icon="💳"
-                        title="Ví trả sau - bePaylater"
-                        subtitle="Hạn mức 10.000.000đ"
-                        onPress={() => { }}
-                        badge="Mới"
-                    />
-                    <MenuItem
-                        icon="🔗"
-                        title="Liên kết tài khoản"
-                        subtitle="Ngân hàng, ví điện tử"
-                        onPress={() => { }}
-                    />
-                </View>
-
-                {/* Dịch vụ */}
-                <SectionHeader title="Dịch vụ" />
-                <View style={styles.menuSection}>
-                    <MenuItem
-                        icon="🚗"
-                        title="Cài đặt chuyến đi"
-                        subtitle="Tùy chỉnh trải nghiệm"
-                        onPress={() => { }}
-                    />
-                    <MenuItem
-                        icon="🛡️"
-                        title="Bảo hiểm OPES"
-                        subtitle="Bảo vệ mọi chuyến đi"
-                        onPress={() => { }}
-                    />
-                    <MenuItem
-                        icon="🎫"
-                        title="Khuyến mại"
-                        subtitle="Mã giảm giá của bạn"
-                        onPress={() => { }}
-                        badge="5"
-                    />
-                    <MenuItem
-                        icon="💎"
-                        title="Gói tiết kiệm"
-                        subtitle="Đăng ký gói ưu đãi"
-                        onPress={() => { }}
-                    />
-                </View>
-
-                {/* Đối tác */}
-                <SectionHeader title="Đối tác" />
-                <View style={styles.menuSection}>
-                    <MenuItem
-                        icon="📢"
-                        title="Giới thiệu & Nhận ưu đãi"
-                        subtitle="Mời bạn bè nhận quà"
-                        onPress={() => { }}
-                    />
-                    <MenuItem
-                        icon="💳"
-                        title="Thanh toán"
-                        subtitle="Quản lý phương thức"
-                        onPress={() => { }}
-                    />
-                    <MenuItem
-                        icon="💼"
-                        title="Mở tài khoản Doanh nghiệp"
-                        onPress={() => { }}
-                    />
-                    <MenuItem
-                        icon="👥"
-                        title="Trở thành đối tác Giúp Việc"
-                        onPress={() => { }}
-                        badge="Mới"
-                    />
-                    <MenuItem
-                        icon="🏪"
-                        title="Trở thành đối tác beFood"
-                        onPress={() => { }}
-                    />
-                </View>
-
-                {/* Thông tin & Hỗ trợ */}
-                <SectionHeader title="Thông tin & Hỗ trợ" />
-                <View style={styles.menuSection}>
-                    <MenuItem
-                        icon="📧"
-                        title="Hộp thư"
-                        subtitle="Thông báo và tin nhắn"
-                        onPress={() => { }}
-                        badge="2"
-                    />
-                    <MenuItem
-                        icon="🎧"
-                        title="Hỗ trợ"
-                        subtitle="Trung tâm trợ giúp"
-                        onPress={() => { }}
-                    />
-                    <MenuItem
-                        icon="⚙️"
-                        title="Cài đặt"
-                        subtitle="Tùy chỉnh ứng dụng"
-                        onPress={() => { }}
-                    />
-                    <MenuItem
-                        icon="📋"
-                        title="Điều khoản & Chính sách"
-                        onPress={() => { }}
-                    />
+                    <View style={styles.storeInfoRow}>
+                        <Text style={styles.storeInfoLabel}>Địa chỉ:</Text>
+                        <Text style={styles.storeInfoValue}>{settings?.storeAddress || "Chưa cập nhật"}</Text>
+                    </View>
                 </View>
 
                 {/* Thông báo */}
-                <SectionHeader title="Thông báo" />
+                <SectionHeader title="🔔 Thông báo" />
                 <View style={styles.menuSection}>
                     <MenuItem
-                        icon="🔔"
-                        title="Thông báo đẩy"
-                        subtitle="Nhận thông báo từ ứng dụng"
-                        showArrow={false}
-                        showSwitch={true}
-                        switchValue={pushNotifications}
-                        onSwitchChange={setPushNotifications}
-                    />
-                    <MenuItem
-                        icon="📨"
-                        title="Thông báo email"
+                        icon="📧"
+                        title="Thông báo Email"
                         subtitle="Nhận thông tin qua email"
                         showArrow={false}
                         showSwitch={true}
-                        switchValue={emailNotifications}
-                        onSwitchChange={setEmailNotifications}
+                        switchValue={settings?.emailNotifications ?? false}
+                        onSwitchChange={handleEmailNotifications}
+                    />
+                    <MenuItem
+                        icon="📦"
+                        title="Thông báo Đơn hàng"
+                        subtitle="Cập nhật trạng thái đơn hàng"
+                        showArrow={false}
+                        showSwitch={true}
+                        switchValue={settings?.orderNotifications ?? true}
+                        onSwitchChange={handleOrderNotifications}
+                    />
+                    <MenuItem
+                        icon="🎁"
+                        title="Thông báo Khuyến mại"
+                        subtitle="Nhận ưu đãi và giảm giá"
+                        showArrow={false}
+                        showSwitch={true}
+                        switchValue={settings?.promotionNotifications ?? true}
+                        onSwitchChange={handlePromotionNotifications}
                     />
                 </View>
 
                 {/* Giao diện */}
-                <SectionHeader title="Giao diện" />
+                <SectionHeader title="🎨 Giao diện" />
                 <View style={styles.menuSection}>
                     <MenuItem
                         icon="🌙"
@@ -308,37 +334,40 @@ export default function ProfileScreen() {
                         subtitle="Giao diện tối bảo vệ mắt"
                         showArrow={false}
                         showSwitch={true}
-                        switchValue={darkMode}
-                        onSwitchChange={setDarkMode}
+                        switchValue={settings?.darkMode ?? false}
+                        onSwitchChange={handleDarkMode}
                     />
                     <MenuItem
                         icon="🌐"
                         title="Ngôn ngữ"
-                        subtitle="Tiếng Việt"
-                        onPress={() => { }}
+                        subtitle={settings?.language === 'vi' ? 'Tiếng Việt' : 'English'}
+                        onPress={() => Alert.alert("Ngôn ngữ", "Chức năng đang phát triển")}
+                    />
+                    <MenuItem
+                        icon="🎨"
+                        title="Màu chủ đạo"
+                        subtitle={settings?.themeColor || "#FF6B6B"}
+                        onPress={() => Alert.alert("Màu sắc", "Chức năng đang phát triển")}
                     />
                 </View>
 
-                {/* Tài khoản */}
-                <SectionHeader title="Tài khoản" />
+                {/* Hỗ trợ */}
+                <SectionHeader title="💁 Hỗ trợ" />
                 <View style={styles.menuSection}>
                     <MenuItem
-                        icon="🔐"
-                        title="Bảo mật"
-                        subtitle="Mật khẩu, xác thực 2 lớp"
-                        onPress={() => { }}
+                        icon="📋"
+                        title="Điều khoản sử dụng"
+                        onPress={() => Alert.alert("Điều khoản", "Chức năng đang phát triển")}
                     />
                     <MenuItem
                         icon="🔒"
-                        title="Quyền riêng tư"
-                        subtitle="Quản lý dữ liệu cá nhân"
-                        onPress={() => { }}
+                        title="Chính sách bảo mật"
+                        onPress={() => Alert.alert("Bảo mật", "Chức năng đang phát triển")}
                     />
                     <MenuItem
-                        icon="📱"
-                        title="Thiết bị đã đăng nhập"
-                        subtitle="Quản lý thiết bị truy cập"
-                        onPress={() => { }}
+                        icon="❓"
+                        title="Trợ giúp"
+                        onPress={() => Alert.alert("Trợ giúp", "Liên hệ: " + (settings?.storePhone || "1900 1234"))}
                     />
                 </View>
 
@@ -353,7 +382,7 @@ export default function ProfileScreen() {
 
                 {/* Version */}
                 <View style={styles.versionContainer}>
-                    <Text style={styles.versionText}>Phiên bản 2.6.122</Text>
+                    <Text style={styles.versionText}>Phiên bản 1.0.0</Text>
                 </View>
 
                 <View style={styles.bottomSpacer} />
@@ -397,6 +426,18 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#F8F9FA',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F8F9FA',
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 16,
+        color: '#7F8C8D',
+        fontWeight: '600',
     },
     profileHeader: {
         backgroundColor: '#FFD93D',
@@ -500,33 +541,38 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         letterSpacing: 0.5,
     },
-    statsContainer: {
-        flexDirection: 'row',
-        paddingHorizontal: 20,
-        paddingVertical: 20,
-        gap: 12,
-    },
-    statCard: {
-        flex: 1,
+    storeInfoCard: {
         backgroundColor: '#FFFFFF',
-        padding: 16,
+        marginHorizontal: 20,
+        marginTop: 20,
+        padding: 20,
         borderRadius: 16,
-        alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 8,
         elevation: 2,
     },
-    statNumber: {
-        fontSize: 22,
-        fontWeight: '900',
-        color: '#FF8A3D',
-        marginBottom: 4,
+    storeInfoTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#2C3E50',
+        marginBottom: 16,
     },
-    statLabel: {
-        fontSize: 13,
+    storeInfoRow: {
+        flexDirection: 'row',
+        marginBottom: 12,
+    },
+    storeInfoLabel: {
+        fontSize: 14,
+        fontWeight: '700',
         color: '#7F8C8D',
+        width: 90,
+    },
+    storeInfoValue: {
+        flex: 1,
+        fontSize: 14,
+        color: '#2C3E50',
         fontWeight: '600',
     },
     sectionHeader: {
@@ -538,7 +584,6 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: '800',
         color: '#2C3E50',
-        textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
     menuSection: {
@@ -649,7 +694,6 @@ const styles = StyleSheet.create({
     bottomSpacer: {
         height: 40,
     },
-    // Logout Modal
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.6)',
