@@ -1,6 +1,6 @@
-import { Tabs } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
-import { View, StyleSheet, Platform } from 'react-native';
+import { Tabs } from "expo-router";
+import { Platform, StyleSheet, View } from 'react-native';
 
 export default function TabLayout() {
   return (
@@ -134,7 +134,7 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Tab 5: Theo dõi - Màu xanh lá */}
+      {/* Tab 5: Theo dõi - Màu xanh lá
       <Tabs.Screen
         name="tracking"
         options={{
@@ -155,7 +155,7 @@ export default function TabLayout() {
             </View>
           ),
         }}
-      />
+      /> */}
 
       {/* Tab 6: Tài khoản - Màu tím nhạt */}
       <Tabs.Screen

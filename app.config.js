@@ -5,7 +5,7 @@ export default {
         slug: "food-drink-app",
         version: "1.0.0",
         orientation: "portrait",
-        icon: "./assets/icon.png",
+        icon: "./assets/f2.png",
         userInterfaceStyle: "light",
         splash: {
             image: "./assets/splash.png",

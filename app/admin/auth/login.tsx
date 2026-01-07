@@ -1,4 +1,4 @@
-// app/admin/auth/login.tsx - FIX NAVIGATION
+// app/admin/auth/login.tsx - FIXED VERSION
 // @ts-nocheck
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -42,9 +42,7 @@ export default function AdminLogin() {
         password: ""
     });
 
-    // ✅ Thêm ref để tránh duplicate navigation
     const isNavigatingRef = useRef(false);
-
     const emailOrUsernameInputRef = useRef<TextInput>(null);
     const passwordInputRef = useRef<TextInput>(null);
 
@@ -108,7 +106,7 @@ export default function AdminLogin() {
     };
 
     const handleLogin = async () => {
-        // ✅ Tránh multiple clicks
+        // ✅ Prevent multiple clicks
         if (isLoading || isNavigatingRef.current) {
             console.log('⚠️ [ADMIN LOGIN] Already processing...');
             return;
@@ -131,53 +129,76 @@ export default function AdminLogin() {
 
         try {
             console.log('🔐 [ADMIN LOGIN] Starting login...');
+            console.log('📧 [ADMIN LOGIN] Username/Email:', emailOrUsername.trim());
 
-            // ✅ Gọi API
+            // ✅ Call API
             const response = await AuthAPI.login(emailOrUsername.trim(), password);
 
             console.log("✅ [ADMIN LOGIN] Login successful");
+            console.log("📦 [ADMIN LOGIN] Response:", JSON.stringify(response, null, 2));
             console.log("👤 [ADMIN LOGIN] User role:", response.role);
 
-            // ✅ KIỂM TRA ROLE
-            if (response.role !== 'ADMIN' && response.role !== 'EMPLOYEE' && response.role !== 'STAFF') {
-                console.warn('⚠️ [ADMIN LOGIN] Invalid role:', response.role);
-                await AuthAPI.logout();
+            // ✅ FIX: Check role chính xác (backend trả về string "ADMIN", không phải object)
+            const userRole = typeof response.role === 'string'
+                ? response.role.toUpperCase()
+                : String(response.role).toUpperCase();
+
+            console.log("🔍 [ADMIN LOGIN] Normalized role:", userRole);
+
+            // ✅ Kiểm tra quyền truy cập
+            const allowedRoles = ['ADMIN', 'EMPLOYEE', 'STAFF'];
+
+            if (!allowedRoles.includes(userRole)) {
+                console.warn('⚠️ [ADMIN LOGIN] Invalid role:', userRole);
+                console.warn('⚠️ [ADMIN LOGIN] Allowed roles:', allowedRoles);
+
+                // Logout nếu không có quyền
+                try {
+                    await AuthAPI.logout();
+                } catch (logoutError) {
+                    console.error('❌ [ADMIN LOGIN] Logout error:', logoutError);
+                }
 
                 Alert.alert(
                     "⚠️ Không có quyền truy cập",
-                    "Bạn không có quyền truy cập vào trang quản trị.",
+                    `Role "${userRole}" không được phép truy cập trang quản trị.\n\nChỉ ADMIN, EMPLOYEE và STAFF mới có quyền.`,
                     [{ text: "OK" }]
                 );
                 return;
             }
 
-            // ✅ Set flag để tránh duplicate navigation
+            // ✅ Set flag to prevent duplicate navigation
             isNavigatingRef.current = true;
 
-            console.log('🚀 [ADMIN LOGIN] Navigating to dashboard...');
+            console.log('✅ [ADMIN LOGIN] Role check passed! Navigating to dashboard...');
 
-            // ✅ Hiển thị thông báo
-            const roleEmoji = response.role === 'ADMIN' ? '👑' :
-                response.role === 'EMPLOYEE' ? '👨‍💼' : '👤';
-            const roleText = response.role === 'ADMIN' ? 'Admin' :
-                response.role === 'EMPLOYEE' ? 'Nhân viên' : 'Staff';
+            // ✅ Prepare success message
+            const roleEmoji = userRole === 'ADMIN' ? '👑' :
+                userRole === 'EMPLOYEE' ? '👨‍💼' : '👤';
+            const roleText = userRole === 'ADMIN' ? 'Admin' :
+                userRole === 'EMPLOYEE' ? 'Nhân viên' : 'Staff';
 
-            // ✅ NAVIGATE NGAY
+            // ✅ Navigate immediately
+            console.log('🚀 [ADMIN LOGIN] Executing router.replace...');
             router.replace('/admin/dashboard');
+            console.log('✅ [ADMIN LOGIN] Navigation command sent');
 
-            console.log('✅ [ADMIN LOGIN] Navigation completed');
-
-            // ✅ Alert sau khi navigate
+            // ✅ Show success alert after navigation
             setTimeout(() => {
                 Alert.alert(
                     `${roleEmoji} ${roleText} - Chào mừng!`,
                     `Xin chào ${response.fullName || response.username}`,
                     [{ text: "OK" }]
                 );
-            }, 500);
+            }, 300);
 
         } catch (error: any) {
             console.error("❌ [ADMIN LOGIN] Error:", error);
+            console.error("❌ [ADMIN LOGIN] Error details:", {
+                message: error?.message,
+                response: error?.response,
+                stack: error?.stack
+            });
 
             // ✅ Reset navigation flag
             isNavigatingRef.current = false;
@@ -206,6 +227,10 @@ export default function AdminLogin() {
         } finally {
             console.log('🏁 [ADMIN LOGIN] Process finished');
             setIsLoading(false);
+            // ✅ Reset navigation flag after a delay to prevent rapid re-clicks
+            setTimeout(() => {
+                isNavigatingRef.current = false;
+            }, 2000);
         }
     };
 

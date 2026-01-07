@@ -1,47 +1,14 @@
 // app/config/api.ts
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 /**
  * ========================================
  * API BASE URL CONFIGURATION
  * ========================================
- * Tự động detect platform và môi trường
  */
 const getBaseUrl = () => {
-    // 1. Production: Lấy từ environment variable
-    const envApiUrl = Constants.expoConfig?.extra?.apiUrl;
-    if (envApiUrl) {
-        return envApiUrl;
-    }
-
-    // 2. Production mode
-    if (!__DEV__) {
-        return 'https://your-app.onrender.com/api'; // ⭐ THAY ĐỔI URL PRODUCTION
-    }
-
-    // 3. Development mode - Tự động detect platform
-    if (Platform.OS === 'web') {
-        return 'http://localhost:8080/api';
-    }
-
-    if (Platform.OS === 'ios') {
-        // iOS Simulator: localhost hoạt động
-        // iOS Physical device: Dùng ngrok
-        return 'http://localhost:8080/api';
-        // Nếu test trên iPhone thật, uncomment dòng dưới:
-        // return 'https://your-ngrok-url.ngrok.io/api';
-    }
-
-    if (Platform.OS === 'android') {
-        // Android Emulator: 10.0.2.2 = localhost của máy host
-        return 'http://10.0.2.2:8080/api';
-        // Nếu test trên Android thật, uncomment dòng dưới:
-        // return 'http://192.168.1.100:8080/api'; // Thay bằng IP máy bạn
-    }
-
-    // Fallback
-    return 'http://localhost:8080/api';
+    // ⭐ FORCE PRODUCTION URL - LUÔN LUÔN DÙNG
+    return 'https://backend-java-i9b3.onrender.com/api';
 };
 
 /**

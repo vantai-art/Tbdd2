@@ -1,11 +1,12 @@
-// app/(tabs)/home.tsx
-import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from "react";
 import {
+    ActivityIndicator,
+    Alert,
     Animated,
     Dimensions,
     Image,
     Platform,
+    RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
@@ -13,31 +14,77 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { useApp } from '../context/AppContext';
+import { API_CONFIG } from '../config/api';
 
 const isWeb = Platform.OS === "web";
 const { width } = Dimensions.get("window");
+const API_BASE_URL = API_CONFIG.BASE_URL;
+// ✅ ĐỊNH NGHĨA TYPES CHO TYPESCRIPT
+interface Category {
+    id: number | string;
+    name: string;
+    description?: string;
+    imageUrl?: string;
+}
 
-const getResponsiveWidth = () => {
-    if (isWeb) {
-        return ((width > 1200 ? 1200 : width) - 80) / 3;
-    } else {
-        // Mobile: 2 cột đều nhau
-        return (width - 52) / 2; // 20px padding mỗi bên + 12px gap
-    }
-};
+interface Product {
+    id: number;
+    name: string;
+    description?: string;
+    price: number;
+    stockQuantity: number;
+    imageUrl: string;
+    isActive: boolean;
+    category?: Category;
+}
 
-// Component chạy chữ
-type MarqueeTextProps = {
+interface Settings {
+    id?: number;
+    storeName?: string;
+    storeEmail?: string;
+    storePhone?: string;
+    storeAddress?: string;
+    currency?: string;
+    timezone?: string;
+    language?: string;
+}
+
+interface CartItem extends Product {
+    quantity: number;
+}
+
+interface MarqueeTextProps {
     texts: string[];
     speed?: number;
+}
+
+// Theme Colors
+const COLORS = {
+    primary: "#FF6B6B",
+    secondary: "#4ECDC4",
+    accent: "#FFD93D",
+    success: "#34C759",
+    text: "#2C3E50",
+    textLight: "#7F8C8D",
+    background: "#F8F9FA",
+    white: "#FFFFFF",
+    border: "#E8E8E8",
 };
 
-const MarqueeText = ({ texts, speed = 50 }: MarqueeTextProps) => {
+// Responsive width calculation
+const getResponsiveWidth = (): number => {
+    if (isWeb) {
+        return ((width > 1200 ? 1200 : width) - 80) / 3;
+    }
+    return (width - 52) / 2;
+};
+
+// Marquee Text Component
+const MarqueeText: React.FC<MarqueeTextProps> = ({ texts, speed = 50 }) => {
     const scrollAnim = useRef(new Animated.Value(0)).current;
-    const [containerWidth, setContainerWidth] = useState(0);
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [textWidth, setTextWidth] = useState(0);
+    const [containerWidth, setContainerWidth] = useState<number>(0);
+    const [currentIndex, setCurrentIndex] = useState<number>(0);
+    const [textWidth, setTextWidth] = useState<number>(0);
 
     useEffect(() => {
         if (containerWidth > 0 && textWidth > 0) {
@@ -74,9 +121,7 @@ const MarqueeText = ({ texts, speed = 50 }: MarqueeTextProps) => {
             <Animated.View
                 style={[
                     styles.marqueeWrapper,
-                    {
-                        transform: [{ translateX: scrollAnim }],
-                    },
+                    { transform: [{ translateX: scrollAnim }] },
                 ]}
             >
                 <Text
@@ -94,13 +139,19 @@ const MarqueeText = ({ texts, speed = 50 }: MarqueeTextProps) => {
     );
 };
 
-export default function CustomerHome() {
-    const { setSelectedProduct, getCartCount, addToCart } = useApp();
-    const [searchQuery, setSearchQuery] = useState("");
-    const [selectedCategory, setSelectedCategory] = useState("all");
-    const [showFloatingCart, setShowFloatingCart] = useState(false);
+export default function HomeScreen() {
+    // State Management
+    const [searchQuery, setSearchQuery] = useState<string>("");
+    const [selectedCategory, setSelectedCategory] = useState<number | string>("all");
+    const [showFloatingCart, setShowFloatingCart] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [refreshing, setRefreshing] = useState<boolean>(false);
 
-    const cartCount = getCartCount();
+    // API Data State
+    const [products, setProducts] = useState<Product[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [cart, setCart] = useState<CartItem[]>([]);
+    const [settings, setSettings] = useState<Settings | null>(null);
 
     const searchPlaceholders = [
         "Tìm món ăn, đồ uống yêu thích...",
@@ -110,137 +161,154 @@ export default function CustomerHome() {
         "Giao nhanh 30 phút...",
     ];
 
-    const categories = [
-        { id: "all", name: "Tất cả", icon: "🍽️", color: "#FF6B6B" },
-        { id: "rice", name: "Cơm", icon: "🍚", color: "#4ECDC4" },
-        { id: "noodles", name: "Mì & Phở", icon: "🍜", color: "#FFE66D" },
-        { id: "drinks", name: "Đồ uống", icon: "🥤", color: "#95E1D3" },
-        { id: "snacks", name: "Ăn vặt", icon: "🍿", color: "#F38181" },
-    ];
+    useEffect(() => {
+        fetchData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-    const products = [
-        {
-            id: 1,
-            name: "Cơm tấm sườn bì chả",
-            desc: "Cơm tấm thơm ngon với sườn nướng, bì và chả",
-            category: "rice",
-            price: 45000,
-            image: "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400",
-            rating: 4.8,
-            soldCount: 234,
-            prepTime: "15-20 phút",
-            tags: ["Bán chạy", "Món chính"],
-            discount: 10,
-        },
-        {
-            id: 2,
-            name: "Phở bò tái",
-            desc: "Phở bò truyền thống nước dùng đậm đà",
-            category: "noodles",
-            price: 55000,
-            image: "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=400",
-            rating: 4.9,
-            soldCount: 456,
-            prepTime: "10-15 phút",
-            tags: ["Hot", "Món chính"],
-            isNew: true,
-        },
-        {
-            id: 3,
-            name: "Bún bò Huế",
-            desc: "Bún bò Huế cay nồng đặc trưng",
-            category: "noodles",
-            price: 50000,
-            image: "https://images.unsplash.com/photo-1559847844-5315695dadae?w=400",
-            rating: 4.7,
-            soldCount: 189,
-            prepTime: "15-20 phút",
-            tags: ["Cay", "Món chính"],
-        },
-        {
-            id: 4,
-            name: "Cơm gà xối mỡ",
-            desc: "Cơm gà thơm ngon kiểu Hội An",
-            category: "rice",
-            price: 40000,
-            image: "https://images.unsplash.com/photo-1610057099443-fde8c4d50f91?w=400",
-            rating: 4.6,
-            soldCount: 167,
-            prepTime: "10-15 phút",
-            tags: ["Món chính"],
-            discount: 15,
-        },
-        {
-            id: 5,
-            name: "Trà sữa trân châu",
-            desc: "Trà sữa trân châu đường đen",
-            category: "drinks",
-            price: 35000,
-            image: "https://images.unsplash.com/photo-1525385133512-2f3bdd039054?w=400",
-            rating: 4.8,
-            soldCount: 678,
-            prepTime: "5-10 phút",
-            tags: ["Bán chạy", "Đồ uống"],
-        },
-        {
-            id: 6,
-            name: "Cà phê sữa đá",
-            desc: "Cà phê phin truyền thống",
-            category: "drinks",
-            price: 25000,
-            image: "https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=400",
-            rating: 4.9,
-            soldCount: 892,
-            prepTime: "5 phút",
-            tags: ["Bán chạy"],
-        },
-        {
-            id: 7,
-            name: "Bánh mì thịt",
-            desc: "Bánh mì giòn tan với nhân thịt đầy đủ",
-            category: "snacks",
-            price: 20000,
-            image: "https://images.unsplash.com/photo-1588137378633-dea1336ce1e2?w=400",
-            rating: 4.7,
-            soldCount: 543,
-            prepTime: "5-10 phút",
-            tags: ["Ăn vặt"],
-        },
-        {
-            id: 8,
-            name: "Nước ép cam",
-            desc: "Nước cam vắt tươi 100%",
-            category: "drinks",
-            price: 30000,
-            image: "https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=400",
-            rating: 4.5,
-            soldCount: 234,
-            prepTime: "5 phút",
-            tags: ["Healthy"],
-            isNew: true,
-        },
-    ];
+    // Fetch all data
+    const fetchData = async (): Promise<void> => {
+        try {
+            setLoading(true);
+            await Promise.all([
+                fetchProducts(),
+                fetchCategories(),
+                fetchSettings(),
+            ]);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            Alert.alert("Lỗi", "Không thể tải dữ liệu. Vui lòng thử lại!");
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
 
+    // Fetch Products
+    const fetchProducts = async (): Promise<void> => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/products`);
+            if (!response.ok) throw new Error("Failed to fetch products");
+            const data: Product[] = await response.json();
+
+            console.log("✅ Products loaded:", data.length);
+            setProducts(data);
+        } catch (error) {
+            console.error("❌ Error fetching products:", error);
+        }
+    };
+
+    // Fetch Categories
+    const fetchCategories = async (): Promise<void> => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/categories`);
+            if (!response.ok) throw new Error("Failed to fetch categories");
+            const data: Category[] = await response.json();
+
+            // Add "All" category
+            const allCategory: Category = {
+                id: "all",
+                name: "Tất cả",
+                description: "Tất cả sản phẩm",
+                imageUrl: "🍽️"
+            };
+
+            console.log("✅ Categories loaded:", data.length);
+            setCategories([allCategory, ...data]);
+        } catch (error) {
+            console.error("❌ Error fetching categories:", error);
+        }
+    };
+
+    // Fetch Settings
+    const fetchSettings = async (): Promise<void> => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/settings`);
+            if (!response.ok) throw new Error("Failed to fetch settings");
+            const data: Settings = await response.json();
+
+            console.log("✅ Settings loaded:", data);
+            setSettings(data);
+        } catch (error) {
+            console.error("❌ Error fetching settings:", error);
+        }
+    };
+
+    // Add to Cart
+    const handleAddToCart = (product: Product): void => {
+        const existingItem = cart.find(item => item.id === product.id);
+
+        if (existingItem) {
+            setCart(cart.map(item =>
+                item.id === product.id
+                    ? { ...item, quantity: item.quantity + 1 }
+                    : item
+            ));
+        } else {
+            setCart([...cart, { ...product, quantity: 1 }]);
+        }
+
+        Alert.alert(
+            "✅ Thành công",
+            `Đã thêm ${product.name} vào giỏ hàng!`,
+            [{ text: "OK" }]
+        );
+    };
+
+    // Navigate to Product Detail
+    const handleProductClick = (product: Product): void => {
+        console.log("Navigate to product:", product);
+        Alert.alert("Thông báo", `Xem chi tiết: ${product.name}`);
+    };
+
+    // Navigate to Cart
+    const handleCartClick = (): void => {
+        console.log("Navigate to cart with items:", cart.length);
+        Alert.alert("Giỏ hàng", `Bạn có ${cartCount} món trong giỏ hàng`);
+    };
+
+    // Filter Products
     const filteredProducts = products.filter(product => {
-        const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
-        const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCategory && matchesSearch;
+        const matchesCategory = selectedCategory === "all" ||
+            product.category?.id === selectedCategory;
+
+        const matchesSearch = product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+        return matchesCategory && matchesSearch && product.isActive;
     });
 
-    const handleProductClick = (product: any) => {
-        setSelectedProduct(product);
-        router.push('../../product/ProductDetail');
+    // Format Currency
+    const formatCurrency = (amount: number): string => {
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND'
+        }).format(amount);
     };
 
-    const handleAddToCart = (product: any) => {
-        addToCart?.(product);
-    };
+    // Calculate Cart Count
+    const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-    const handleScroll = (event: any) => {
+    // Handle Scroll
+    const handleScroll = (event: any): void => {
         const offsetY = event.nativeEvent.contentOffset.y;
-        // Hiển thị floating cart khi cuộn xuống quá 200px
         setShowFloatingCart(offsetY > 200);
     };
+
+    // Refresh Handler
+    const onRefresh = (): void => {
+        setRefreshing(true);
+        fetchData();
+    };
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
@@ -248,6 +316,9 @@ export default function CustomerHome() {
                 showsVerticalScrollIndicator={false}
                 onScroll={handleScroll}
                 scrollEventThrottle={16}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                }
             >
                 {/* Header */}
                 <View style={styles.header}>
@@ -257,8 +328,12 @@ export default function CustomerHome() {
                                 <Text style={styles.logoIcon}>🍜</Text>
                             </View>
                             <View>
-                                <Text style={styles.logoText}>Quán Ngon</Text>
-                                <Text style={styles.logoSubtext}>Đặt món nhanh - Giao tận nơi</Text>
+                                <Text style={styles.logoText}>
+                                    {settings?.storeName || "Quán Ngon"}
+                                </Text>
+                                <Text style={styles.logoSubtext}>
+                                    Đặt món nhanh - Giao tận nơi
+                                </Text>
                             </View>
                         </View>
 
@@ -272,7 +347,7 @@ export default function CustomerHome() {
 
                             <TouchableOpacity
                                 style={styles.cartButton}
-                                onPress={() => router.push('/(tabs)/cart')}
+                                onPress={handleCartClick}
                             >
                                 <Text style={styles.cartIcon}>🛒</Text>
                                 {cartCount > 0 && (
@@ -317,6 +392,7 @@ export default function CustomerHome() {
                                             value={searchQuery}
                                             onChangeText={setSearchQuery}
                                             autoFocus
+                                            placeholder="Tìm kiếm..."
                                         />
                                     )}
                                     {searchQuery === "" && (
@@ -326,7 +402,10 @@ export default function CustomerHome() {
                                         />
                                     )}
                                 </View>
-                                <TouchableOpacity style={styles.searchButton}>
+                                <TouchableOpacity
+                                    style={styles.searchButton}
+                                    onPress={() => console.log("Search:", searchQuery)}
+                                >
                                     <Text style={styles.searchButtonText}>Tìm</Text>
                                 </TouchableOpacity>
                             </View>
@@ -357,24 +436,20 @@ export default function CustomerHome() {
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={[
-                            styles.categoriesScroll,
-                            isWeb && { justifyContent: 'center', width: '100%' }
-                        ]}
+                        contentContainerStyle={styles.categoriesScroll}
                     >
                         {categories.map((cat) => (
                             <TouchableOpacity
                                 key={cat.id}
                                 style={[
                                     styles.categoryCard,
-                                    selectedCategory === cat.id && {
-                                        backgroundColor: cat.color,
-                                        borderColor: cat.color,
-                                    }
+                                    selectedCategory === cat.id && styles.categoryCardActive
                                 ]}
                                 onPress={() => setSelectedCategory(cat.id)}
                             >
-                                <Text style={styles.categoryIcon}>{cat.icon}</Text>
+                                <Text style={styles.categoryIcon}>
+                                    {cat.imageUrl || "🍽️"}
+                                </Text>
                                 <Text style={[
                                     styles.categoryName,
                                     selectedCategory === cat.id && styles.categoryNameActive
@@ -391,100 +466,94 @@ export default function CustomerHome() {
                     <View style={styles.productHeader}>
                         <View>
                             <Text style={styles.sectionTitle}>📈 Món phổ biến</Text>
-                            <Text style={styles.productCount}>🔥 {filteredProducts.length} món đang hot</Text>
+                            <Text style={styles.productCount}>
+                                🔥 {filteredProducts.length} món đang hot
+                            </Text>
                         </View>
                     </View>
 
-                    <View style={styles.productsGrid}>
-                        {filteredProducts.map((product) => (
-                            <TouchableOpacity
-                                key={product.id}
-                                style={styles.productCard}
-                                onPress={() => handleProductClick(product)}
-                            >
-                                <View style={styles.productImageBox}>
-                                    <Image
-                                        source={{ uri: product.image }}
-                                        style={styles.productImage}
-                                        resizeMode="cover"
-                                    />
+                    {filteredProducts.length === 0 ? (
+                        <View style={styles.emptyProducts}>
+                            <Text style={styles.emptyIcon}>🔍</Text>
+                            <Text style={styles.emptyText}>Không tìm thấy sản phẩm</Text>
+                            <Text style={styles.emptyDesc}>
+                                Thử tìm kiếm với từ khóa khác
+                            </Text>
+                        </View>
+                    ) : (
+                        <View style={styles.productsGrid}>
+                            {filteredProducts.map((product) => (
+                                <TouchableOpacity
+                                    key={product.id}
+                                    style={styles.productCard}
+                                    onPress={() => handleProductClick(product)}
+                                >
+                                    <View style={styles.productImageBox}>
+                                        <Image
+                                            source={{ uri: product.imageUrl }}
+                                            style={styles.productImage}
+                                            resizeMode="cover"
+                                        />
 
-                                    {/* Badges */}
-                                    {product.isNew && (
-                                        <View style={styles.newBadge}>
-                                            <Text style={styles.newText}>MỚI</Text>
-                                        </View>
-                                    )}
-                                    {product.discount && (
-                                        <View style={styles.discountBadge}>
-                                            <Text style={styles.discountText}>-{product.discount}%</Text>
-                                        </View>
-                                    )}
-
-                                    <View style={styles.ratingBadge}>
-                                        <Text style={styles.starIcon}>⭐</Text>
-                                        <Text style={styles.ratingText}>{product.rating}</Text>
-                                    </View>
-                                </View>
-
-                                <View style={styles.productInfo}>
-                                    {/* Tags */}
-                                    <View style={styles.tagsRow}>
-                                        {product.tags.map((tag, i) => (
-                                            <View key={i} style={styles.tagBadge}>
-                                                <Text style={styles.tagText}>{tag}</Text>
-                                            </View>
-                                        ))}
-                                    </View>
-
-                                    <Text style={styles.productName} numberOfLines={1}>
-                                        {product.name}
-                                    </Text>
-                                    <Text style={styles.productDesc} numberOfLines={2}>
-                                        {product.desc}
-                                    </Text>
-
-                                    <View style={styles.productMeta}>
-                                        <View style={styles.metaItem}>
-                                            <Text style={styles.metaIcon}>🕐</Text>
-                                            <Text style={styles.metaText}>{product.prepTime}</Text>
-                                        </View>
-                                        <Text style={styles.metaDivider}>•</Text>
-                                        <Text style={styles.metaText}>Đã bán {product.soldCount}</Text>
-                                    </View>
-
-                                    <View style={styles.productFooter}>
-                                        <View>
-                                            {product.discount ? (
-                                                <View>
-                                                    <Text style={styles.productPrice}>
-                                                        {(product.price * (1 - product.discount / 100)).toLocaleString('vi-VN')}đ
-                                                    </Text>
-                                                    <Text style={styles.productOldPrice}>
-                                                        {product.price.toLocaleString('vi-VN')}đ
-                                                    </Text>
-                                                </View>
-                                            ) : (
-                                                <Text style={styles.productPrice}>
-                                                    {product.price.toLocaleString('vi-VN')}đ
+                                        {product.stockQuantity < 10 && product.stockQuantity > 0 && (
+                                            <View style={styles.stockBadge}>
+                                                <Text style={styles.stockText}>
+                                                    Còn {product.stockQuantity}
                                                 </Text>
-                                            )}
+                                            </View>
+                                        )}
+
+                                        {product.stockQuantity === 0 && (
+                                            <View style={styles.outOfStockBadge}>
+                                                <Text style={styles.outOfStockText}>Hết hàng</Text>
+                                            </View>
+                                        )}
+                                    </View>
+
+                                    <View style={styles.productInfo}>
+                                        <Text style={styles.productName} numberOfLines={2}>
+                                            {product.name}
+                                        </Text>
+                                        <Text style={styles.productDesc} numberOfLines={2}>
+                                            {product.description}
+                                        </Text>
+
+                                        <View style={styles.productMeta}>
+                                            <Text style={styles.categoryLabel}>
+                                                {product.category?.name || "Khác"}
+                                            </Text>
                                         </View>
 
-                                        <TouchableOpacity
-                                            style={styles.addCartBtn}
-                                            onPress={(e) => {
-                                                e.stopPropagation();
-                                                handleAddToCart(product);
-                                            }}
-                                        >
-                                            <Text style={styles.cartIconSmall}>➕</Text>
-                                        </TouchableOpacity>
+                                        <View style={styles.productFooter}>
+                                            <View>
+                                                <Text style={styles.productPrice}>
+                                                    {formatCurrency(product.price)}
+                                                </Text>
+                                            </View>
+
+                                            <TouchableOpacity
+                                                style={[
+                                                    styles.addCartBtn,
+                                                    product.stockQuantity === 0 && styles.addCartBtnDisabled
+                                                ]}
+                                                onPress={(e) => {
+                                                    e.stopPropagation();
+                                                    if (product.stockQuantity > 0) {
+                                                        handleAddToCart(product);
+                                                    }
+                                                }}
+                                                disabled={product.stockQuantity === 0}
+                                            >
+                                                <Text style={styles.cartIconSmall}>
+                                                    {product.stockQuantity === 0 ? "🚫" : "➕"}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </View>
                                     </View>
-                                </View>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
                 </View>
 
                 {/* Footer */}
@@ -496,7 +565,9 @@ export default function CustomerHome() {
                                     <View style={styles.footerLogoCircle}>
                                         <Text style={styles.footerLogoIcon}>🍜</Text>
                                     </View>
-                                    <Text style={styles.footerLogoText}>Quán Ngon</Text>
+                                    <Text style={styles.footerLogoText}>
+                                        {settings?.storeName || "Quán Ngon"}
+                                    </Text>
                                 </View>
                                 <Text style={styles.footerDesc}>
                                     Mang đến trải nghiệm ẩm thực tuyệt vời nhất cho bạn
@@ -505,9 +576,15 @@ export default function CustomerHome() {
 
                             <View style={styles.footerCol}>
                                 <Text style={styles.footerTitle}>Liên hệ</Text>
-                                <Text style={styles.footerContact}>📍 123 Nguyễn Huệ, Q.1, TP.HCM</Text>
-                                <Text style={styles.footerContact}>📞 1900 1234</Text>
-                                <Text style={styles.footerContact}>✉️ hello@quanngon.vn</Text>
+                                <Text style={styles.footerContact}>
+                                    📍 {settings?.storeAddress || "123 Nguyễn Huệ, Q.1, TP.HCM"}
+                                </Text>
+                                <Text style={styles.footerContact}>
+                                    📞 {settings?.storePhone || "1900 1234"}
+                                </Text>
+                                <Text style={styles.footerContact}>
+                                    ✉️ {settings?.storeEmail || "hello@quanngon.vn"}
+                                </Text>
                             </View>
 
                             <View style={styles.footerCol}>
@@ -519,18 +596,18 @@ export default function CustomerHome() {
 
                         <View style={styles.footerBottom}>
                             <Text style={styles.footerCopyright}>
-                                © 2025 Quán Ngon. All rights reserved.
+                                © 2025 {settings?.storeName || "Quán Ngon"}. All rights reserved.
                             </Text>
                         </View>
                     </View>
                 )}
             </ScrollView>
 
-            {/* Floating Cart Button - Only show when scrolled down and has items */}
+            {/* Floating Cart Button */}
             {!isWeb && showFloatingCart && cartCount > 0 && (
                 <TouchableOpacity
                     style={styles.floatingCartButton}
-                    onPress={() => router.push('/(tabs)/cart')}
+                    onPress={handleCartClick}
                     activeOpacity={0.9}
                 >
                     <View style={styles.floatingCartContent}>
@@ -556,10 +633,22 @@ export default function CustomerHome() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: COLORS.white,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: COLORS.background,
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 16,
+        color: COLORS.textLight,
+        fontWeight: "600",
     },
     header: {
-        backgroundColor: "#FFFFFF",
+        backgroundColor: COLORS.white,
         paddingTop: isWeb ? 20 : 50,
         paddingBottom: 20,
         borderBottomWidth: 2,
@@ -588,10 +677,10 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: "#FF6B6B",
+        backgroundColor: COLORS.primary,
         alignItems: "center",
         justifyContent: "center",
-        shadowColor: "#FF6B6B",
+        shadowColor: COLORS.primary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.4,
         shadowRadius: 6,
@@ -603,11 +692,11 @@ const styles = StyleSheet.create({
     logoText: {
         fontSize: 24,
         fontWeight: "900",
-        color: "#2C3E50",
+        color: COLORS.text,
     },
     logoSubtext: {
         fontSize: 12,
-        color: "#7F8C8D",
+        color: COLORS.textLight,
         fontWeight: "600",
         marginTop: 2,
     },
@@ -631,17 +720,17 @@ const styles = StyleSheet.create({
     openTimeText: {
         fontSize: 13,
         fontWeight: "800",
-        color: "#FF6B6B",
+        color: COLORS.primary,
     },
     cartButton: {
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: "#FF6B6B",
+        backgroundColor: COLORS.primary,
         alignItems: "center",
         justifyContent: "center",
         position: "relative",
-        shadowColor: "#FF6B6B",
+        shadowColor: COLORS.primary,
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.4,
         shadowRadius: 8,
@@ -662,15 +751,15 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         paddingHorizontal: 6,
         borderWidth: 2,
-        borderColor: "#FFFFFF",
+        borderColor: COLORS.white,
     },
     cartBadgeText: {
         fontSize: 11,
         fontWeight: "900",
-        color: "#FFFFFF",
+        color: COLORS.white,
     },
     heroBanner: {
-        backgroundColor: "#FF6B6B",
+        backgroundColor: COLORS.primary,
         paddingVertical: isWeb ? 60 : 40,
         paddingHorizontal: 20,
     },
@@ -705,18 +794,18 @@ const styles = StyleSheet.create({
     promoText: {
         fontSize: 12,
         fontWeight: "800",
-        color: "#FFFFFF",
+        color: COLORS.white,
         letterSpacing: 1,
     },
     heroTitle: {
         fontSize: isWeb ? 52 : 40,
         fontWeight: "900",
-        color: "#FFFFFF",
+        color: COLORS.white,
         marginBottom: 16,
         lineHeight: isWeb ? 62 : 48,
     },
     heroTitleHighlight: {
-        color: "#FFD93D",
+        color: COLORS.accent,
     },
     heroSubtitle: {
         fontSize: 18,
@@ -733,7 +822,7 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#FFFFFF",
+        backgroundColor: COLORS.white,
         paddingHorizontal: 18,
         borderRadius: 30,
         height: 55,
@@ -751,11 +840,11 @@ const styles = StyleSheet.create({
     searchInput: {
         flex: 1,
         fontSize: 15,
-        color: "#2C3E50",
+        color: COLORS.text,
         fontWeight: "500",
     },
     searchButton: {
-        backgroundColor: "#2C3E50",
+        backgroundColor: COLORS.text,
         paddingHorizontal: 32,
         borderRadius: 30,
         height: 55,
@@ -770,7 +859,7 @@ const styles = StyleSheet.create({
     searchButtonText: {
         fontSize: 16,
         fontWeight: "800",
-        color: "#FFFFFF",
+        color: COLORS.white,
     },
     marqueeContainer: {
         flex: 1,
@@ -823,7 +912,7 @@ const styles = StyleSheet.create({
         width: 100,
         height: 100,
         borderRadius: 50,
-        backgroundColor: "#FFD93D",
+        backgroundColor: COLORS.accent,
         top: 20,
         right: 10,
         opacity: 0.3,
@@ -833,14 +922,14 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: COLORS.white,
         bottom: 30,
         left: 10,
         opacity: 0.3,
     },
     categoriesSection: {
         paddingVertical: 30,
-        backgroundColor: "#FAFAFA",
+        backgroundColor: COLORS.background,
     },
     sectionHeader: {
         paddingHorizontal: 20,
@@ -852,27 +941,31 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 24,
         fontWeight: "900",
-        color: "#2C3E50",
+        color: COLORS.text,
     },
     categoriesScroll: {
-        paddingHorizontal: 30,
+        paddingHorizontal: 20,
         gap: 12,
     },
     categoryCard: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#FFFFFF",
+        backgroundColor: COLORS.white,
         paddingVertical: 12,
         paddingHorizontal: 20,
         borderRadius: 25,
         gap: 8,
         borderWidth: 2,
-        borderColor: "#E8E8E8",
+        borderColor: COLORS.border,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 6,
         elevation: 3,
+    },
+    categoryCardActive: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
     },
     categoryIcon: {
         fontSize: 22,
@@ -880,10 +973,10 @@ const styles = StyleSheet.create({
     categoryName: {
         fontSize: 15,
         fontWeight: "700",
-        color: "#7F8C8D",
+        color: COLORS.textLight,
     },
     categoryNameActive: {
-        color: "#FFFFFF",
+        color: COLORS.white,
     },
     productsSection: {
         paddingHorizontal: 20,
@@ -891,16 +984,35 @@ const styles = StyleSheet.create({
         maxWidth: isWeb ? 1200 : undefined,
         width: "100%",
         alignSelf: "center",
-        backgroundColor: "#FFFFFF",
+        backgroundColor: COLORS.white,
     },
     productHeader: {
         marginBottom: 25,
     },
     productCount: {
         fontSize: 14,
-        color: "#FF6B6B",
+        color: COLORS.primary,
         marginTop: 6,
         fontWeight: "700",
+    },
+    emptyProducts: {
+        alignItems: "center",
+        paddingVertical: 60,
+    },
+    emptyIcon: {
+        fontSize: 80,
+        marginBottom: 16,
+        opacity: 0.5,
+    },
+    emptyText: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: COLORS.text,
+        marginBottom: 8,
+    },
+    emptyDesc: {
+        fontSize: 14,
+        color: COLORS.textLight,
     },
     productsGrid: {
         flexDirection: "row",
@@ -909,7 +1021,7 @@ const styles = StyleSheet.create({
         justifyContent: isWeb ? "flex-start" : "space-between",
     },
     productCard: {
-        backgroundColor: "#FFFFFF",
+        backgroundColor: COLORS.white,
         borderRadius: 20,
         overflow: "hidden",
         shadowColor: "#000",
@@ -931,26 +1043,26 @@ const styles = StyleSheet.create({
         width: "100%",
         height: "100%",
     },
-    newBadge: {
+    stockBadge: {
         position: "absolute",
         top: 12,
         left: 12,
-        backgroundColor: "#34C759",
+        backgroundColor: "#FF9500",
         paddingVertical: 6,
         paddingHorizontal: 12,
         borderRadius: 20,
-        shadowColor: "#34C759",
+        shadowColor: "#FF9500",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.4,
         shadowRadius: 4,
         elevation: 3,
     },
-    newText: {
+    stockText: {
         fontSize: 11,
         fontWeight: "900",
-        color: "#FFFFFF",
+        color: COLORS.white,
     },
-    discountBadge: {
+    outOfStockBadge: {
         position: "absolute",
         top: 12,
         left: 12,
@@ -964,90 +1076,38 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 3,
     },
-    discountText: {
+    outOfStockText: {
         fontSize: 11,
         fontWeight: "900",
-        color: "#FFFFFF",
-    },
-    ratingBadge: {
-        position: "absolute",
-        top: 12,
-        right: 12,
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#FFFFFF",
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 20,
-        gap: 4,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    starIcon: {
-        fontSize: 14,
-    },
-    ratingText: {
-        fontSize: 13,
-        fontWeight: "800",
-        color: "#2C3E50",
+        color: COLORS.white,
     },
     productInfo: {
         padding: isWeb ? 18 : 14,
     },
-    tagsRow: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 6,
-        marginBottom: 10,
-    },
-    tagBadge: {
-        backgroundColor: "#FFF3E0",
-        paddingVertical: 4,
-        paddingHorizontal: 10,
-        borderRadius: 12,
-    },
-    tagText: {
-        fontSize: 11,
-        fontWeight: "700",
-        color: "#FF6B6B",
-    },
     productName: {
         fontSize: isWeb ? 18 : 16,
         fontWeight: "900",
-        color: "#2C3E50",
+        color: COLORS.text,
         marginBottom: 6,
     },
     productDesc: {
         fontSize: isWeb ? 13 : 12,
-        color: "#7F8C8D",
+        color: COLORS.textLight,
         lineHeight: isWeb ? 20 : 18,
         marginBottom: 10,
     },
     productMeta: {
-        flexDirection: "row",
-        alignItems: "center",
         marginBottom: 12,
-        flexWrap: "wrap",
     },
-    metaItem: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-    },
-    metaIcon: {
-        fontSize: 12,
-    },
-    metaText: {
-        fontSize: 12,
-        color: "#7F8C8D",
-        fontWeight: "600",
-    },
-    metaDivider: {
-        marginHorizontal: 8,
-        color: "#7F8C8D",
+    categoryLabel: {
+        fontSize: 11,
+        fontWeight: "700",
+        color: COLORS.secondary,
+        backgroundColor: COLORS.secondary + "20",
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        borderRadius: 12,
+        alignSelf: "flex-start",
     },
     productFooter: {
         flexDirection: "row",
@@ -1057,27 +1117,24 @@ const styles = StyleSheet.create({
     productPrice: {
         fontSize: isWeb ? 24 : 20,
         fontWeight: "900",
-        color: "#FF6B6B",
-    },
-    productOldPrice: {
-        fontSize: isWeb ? 14 : 12,
-        color: "#95A5A6",
-        textDecorationLine: "line-through",
-        marginTop: 2,
-        fontWeight: "600",
+        color: COLORS.primary,
     },
     addCartBtn: {
-        backgroundColor: "#FF6B6B",
+        backgroundColor: COLORS.primary,
         width: isWeb ? 50 : 45,
         height: isWeb ? 50 : 45,
         borderRadius: isWeb ? 25 : 22,
         alignItems: "center",
         justifyContent: "center",
-        shadowColor: "#FF6B6B",
+        shadowColor: COLORS.primary,
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.4,
         shadowRadius: 8,
         elevation: 5,
+    },
+    addCartBtnDisabled: {
+        backgroundColor: COLORS.textLight,
+        opacity: 0.5,
     },
     cartIconSmall: {
         fontSize: isWeb ? 24 : 20,
@@ -1109,7 +1166,7 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: "#FF6B6B",
+        backgroundColor: COLORS.primary,
         alignItems: "center",
         justifyContent: "center",
     },
@@ -1119,7 +1176,7 @@ const styles = StyleSheet.create({
     footerLogoText: {
         fontSize: 22,
         fontWeight: "900",
-        color: "#FFFFFF",
+        color: COLORS.white,
     },
     footerDesc: {
         fontSize: 14,
@@ -1129,7 +1186,7 @@ const styles = StyleSheet.create({
     footerTitle: {
         fontSize: 16,
         fontWeight: "800",
-        color: "#FFFFFF",
+        color: COLORS.white,
         marginBottom: 16,
     },
     footerContact: {
@@ -1151,12 +1208,11 @@ const styles = StyleSheet.create({
         color: "#7F8C8D",
         textAlign: "center",
     },
-    // Floating Cart Button Styles
     floatingCartButton: {
         position: "absolute",
         bottom: 90,
         right: 16,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: COLORS.white,
         borderRadius: 30,
         paddingVertical: 12,
         paddingHorizontal: 16,
@@ -1169,7 +1225,7 @@ const styles = StyleSheet.create({
         elevation: 8,
         zIndex: 1000,
         borderWidth: 1,
-        borderColor: "#FF6B6B",
+        borderColor: COLORS.primary,
     },
     floatingCartContent: {
         flexDirection: "row",
@@ -1185,7 +1241,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: "#FF6B6B",
+        backgroundColor: COLORS.primary,
         alignItems: "center",
         justifyContent: "center",
     },
@@ -1198,25 +1254,25 @@ const styles = StyleSheet.create({
     floatingCartCount: {
         fontSize: 15,
         fontWeight: "900",
-        color: "#2C3E50",
+        color: COLORS.text,
         marginBottom: 2,
     },
     floatingCartLabel: {
         fontSize: 12,
-        color: "#FF6B6B",
+        color: COLORS.primary,
         fontWeight: "700",
     },
     floatingCartArrow: {
         width: 28,
         height: 28,
         borderRadius: 14,
-        backgroundColor: "#FF6B6B",
+        backgroundColor: COLORS.primary,
         alignItems: "center",
         justifyContent: "center",
     },
     floatingCartArrowIcon: {
         fontSize: 16,
-        color: "#FFFFFF",
+        color: COLORS.white,
         fontWeight: "700",
     },
 });

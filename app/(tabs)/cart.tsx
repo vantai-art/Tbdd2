@@ -4,6 +4,7 @@ import { Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpa
 import { useApp } from '../context/AppContext';
 
 const isWeb = Platform.OS === 'web';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const windowWidth = Dimensions.get('window').width;
 
 export default function CartScreen() {
